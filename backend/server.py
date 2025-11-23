@@ -376,11 +376,11 @@ async def create_requirement(req_data: RequirementCreate, current_user: dict = D
     req_dict["created_at"] = req_dict["created_at"].isoformat()
     req_dict["updated_at"] = req_dict["updated_at"].isoformat()
     
-    await requirements_collection.insert_one(req_dict)
+    result = await requirements_collection.insert_one(req_dict)
     
     return {
         "message": "Requisito creado exitosamente",
-        "requirement": req_dict
+        "requirement": {k: v for k, v in req_dict.items() if k != '_id'}
     }
 
 @api_router.put("/requirements/{requirement_id}")
