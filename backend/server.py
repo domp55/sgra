@@ -237,11 +237,12 @@ async def create_project(project_data: ProjectCreate, current_user: dict = Depen
     project_dict = project.model_dump()
     project_dict["created_at"] = project_dict["created_at"].isoformat()
     
-    await projects_collection.insert_one(project_dict)
+    result = await projects_collection.insert_one(project_dict)
     
+    # Return without MongoDB's _id
     return {
         "message": "Proyecto creado exitosamente",
-        "project": project_dict
+        "project": {k: v for k, v in project_dict.items() if k != '_id'}
     }
 
 @api_router.delete("/projects/{project_id}")
