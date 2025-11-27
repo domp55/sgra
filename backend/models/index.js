@@ -10,17 +10,17 @@ const db = {};
 
 let sequelize;
 
- sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    dialect: process.env.DB_DIALECT,
-    timezone: '-05:00',
-    port :   process.env.DB_PORT,
+sequelize = new Sequelize(
+    process.env.DB_NAME,
+    process.env.DB_USER,
+    process.env.DB_PASSWORD,
+    {
+        host: process.env.DB_HOST,
+        dialect: process.env.DB_DIALECT,
+        timezone: '-05:00',
+        port: process.env.DB_PORT,
 
-  }
+    }
 )
 
 fs.readdirSync(__dirname)
@@ -30,7 +30,7 @@ fs.readdirSync(__dirname)
         );
     })
     .forEach((file) => {
-        console.log(`🔍 Cargando modelo: ${file}`); 
+        console.log(`🔍 Cargando modelo: ${file}`);
 
         const model = require(path.join(__dirname, file));
 

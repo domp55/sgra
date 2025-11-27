@@ -5,11 +5,15 @@ const db = require('./models');
 const app = express();
 const PORT = 3000;
 const cuentaRouter = require('./routes/cuentaRoutes');
+const loginRouter = require('./routes/loginRoutes');
 
 app.use(express.json());
 app.use(cors());
-app.use(express.json());
-app.use('/api/cuenta',cuentaRouter);
+
+app.use('/api/cuenta', cuentaRouter);
+app.use('/api/privado', loginRouter);
+
+
 db.sequelize.sync({ alter: true })  
   .then(() => {
     console.log('Base de datos sincronizada');
