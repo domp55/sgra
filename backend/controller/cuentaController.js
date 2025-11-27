@@ -92,29 +92,56 @@ class CuentaController {
     }
   }
 
+
+
+
   // HU7: Listar cuentas
-  async listarCuentas(req, res) {
-    try {
-      const cuentas = await Cuenta.findAll({
-        include: [
-          { model: Persona, as: "persona" },
-          { model: Colaborador, as: "colaborador" },
-        ],
-      });
-
-      if (cuentas.length === 0) {
-        return res.status(404).json({ mensaje: "No hay cuentas registradas" });
-      }
-
-      res.status(200).json(cuentas);
-    } catch (error) {
-      res.status(500).json({
-        mensaje: "Error al listar cuentas",
-        error: error.message,
-      });
+  async listarCuentasAprobadas(req, res) {
+  try {
+    const cuentas = await Cuenta.findAll({
+      where: { estado: true },
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido"],
+        },
+      ],
+    });
+console.log(cuentas);
+    if (!cuentas || cuentas.length === 0) {
+      return res.status(404).json({ mensaje: "No hay cuentas registradas" });
     }
+
+    return res.status(200).json(cuentas);
+  } catch (error) {
+    return res.status(500).json({
+      mensaje: "Error al listar cuentas",
+      error: error.message,
+    });
   }
-  //cuentas para aprobarlas
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //cuentas para aprobarlas  HU7: Listar cuentas
   async listarCuentasPorAprobar(req, res) {
     try {
       const cuentas = await Cuenta.findAll({
@@ -136,7 +163,6 @@ class CuentaController {
         return res.status(404).json({ mensaje: "No hay cuentas registradas" });
       }
 
-      // Transformar la respuesta para manejar persona como array
       const resultado = cuentas.map((c) => {
         const persona = Array.isArray(c.persona) ? c.persona[0] : c.persona;
 
