@@ -1,3 +1,5 @@
+const { UUIDV4 } = require("sequelize");
+
 // models/colaborador.js
 module.exports = (sequelize, DataTypes) => {
     const Colaborador = sequelize.define("colaborador", {
@@ -12,7 +14,12 @@ module.exports = (sequelize, DataTypes) => {
         cuentaID: {
             type: DataTypes.INTEGER,
             allowNull: false
-        }
+        },
+        external: { 
+            type: DataTypes.UUID, 
+            defaultValue: DataTypes.UUIDV4 
+        },
+
     },{ freezeTableName: true});
 
     Colaborador.associate = (models) => {

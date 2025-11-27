@@ -4,11 +4,12 @@ const db = require('./models');
 
 const app = express();
 const PORT = 3000;
+const cuentaRouter = require('./routes/cuentaRoutes');
 
 app.use(express.json());
 app.use(cors());
 app.use(express.json());
-
+app.use('/api/cuenta',cuentaRouter);
 db.sequelize.sync({ alter: true })  
   .then(() => {
     console.log('Base de datos sincronizada');

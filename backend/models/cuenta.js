@@ -2,7 +2,7 @@
 
 module.exports = (sequelize, DataTypes) => {
     const cuenta = sequelize.define('cuenta', {
-        external_id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4 },
+        external: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4 },
         estado: { type: DataTypes.BOOLEAN,  defaultValue: true },
         esAdmin: { type: DataTypes.BOOLEAN, allowNull: false },
         correo: { type: DataTypes.STRING(75), allowNull: false },

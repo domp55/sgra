@@ -19,6 +19,8 @@
 
 # production
 /build
+/build_node
+/dev
 
 # misc
 .DS_Store
