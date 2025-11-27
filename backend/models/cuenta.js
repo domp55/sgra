@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
         estado: { type: DataTypes.BOOLEAN,  defaultValue: true },
         esAdmin: { type: DataTypes.BOOLEAN, allowNull: false },
         correo: { type: DataTypes.STRING(75), allowNull: false },
-        contraseña: { type: DataTypes.STRING(250), allowNull: false }
+        contrasena: { type: DataTypes.STRING(250), allowNull: false }
     }, {
         freezeTableName: true
     });

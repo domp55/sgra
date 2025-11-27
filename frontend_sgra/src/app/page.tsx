@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -77,11 +78,19 @@ export default function LoginPage() {
         </form>
 
         {/* Recuperar */}
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-          ¿Olvidaste tu contraseña?
-          <button className="text-blue-600 dark:text-blue-400 ml-1 hover:underline">
-            Recuperar
-          </button>
+<div className="mt-6 text-center text-sm text-muted-foreground">
+  ¿Olvidaste tu contraseña?   
+  <span className="text-green-600 font-medium">
+     Contactate con el administrador
+  </span>
+</div>
+
+        
+<div className="mt-6 text-center text-sm text-muted-foreground">
+          ¿Aún no estas registrado?{' '}
+          <Link href="/user/registro" className="text-blue-600 hover:underline font-medium">
+            Envia una solicitud de registro
+          </Link>
         </div>
       </div>
     </div>

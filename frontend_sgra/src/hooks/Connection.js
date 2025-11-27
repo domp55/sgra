@@ -1,4 +1,5 @@
-const URL_BACKEND= process.env.API;
+const URL_BACKEND = "http://localhost:3001";
+
 
 
 import axios from 'axios';

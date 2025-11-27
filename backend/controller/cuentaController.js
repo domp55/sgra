@@ -30,9 +30,10 @@ class CuentaController {
             // Crear cuenta asociada
             const nuevaCuenta = await Cuenta.create({
                 correo,
-                contraseña: hash,   // Tu modelo usa "contraseña" con Ñ
+                contrasena: hash,   // Tu modelo usa "contraseña" con Ñ
                 estado: false,
-                personaId: nuevaPersona.id
+                personaId: nuevaPersona.id,
+                esAdmin: false
             }, { transaction: t });
 
             await t.commit();
