@@ -15,7 +15,7 @@ export async function desactivarCuenta(external,token) {
 export async function aceptarCuenta(external,token) {
     let datos = null;
     try{
-        datos = await PATCH('/api/cuenta//aprobar/'+ external, token);
+        datos = await PATCH('/api/cuenta/aprobar/'+ external, token);
     }
     catch(error){ 
         return error;
@@ -27,6 +27,20 @@ export async function listarCuentas(token) {
     let datos = null;
     try{
         datos = await GET('/api/cuenta/listarCuentas', token);
+    }
+    catch(error){
+        return error;
+    }
+    console.log(datos.data);
+    return datos.data
+}
+
+export async function listarCuentasPorAprobar(token) {
+    let datos = null;
+    try{
+        datos = await GET('/api/cuenta/listarCuentasPorAprobar', token);
+                console.log(datos)
+
     }
     catch(error){
         return error;
