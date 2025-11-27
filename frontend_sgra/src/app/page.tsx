@@ -3,16 +3,40 @@
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
+import { inicio_sesion } from '../hooks/Autenticacion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import mensajes from '../components/Mensajes';
 
 export default function LoginPage() {
+
+  const router = useRouter();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [contrasena, setContrasena] = useState('');
 
   const handleLogin = (e: any) => {
     e.preventDefault();
-    console.log("Login:", email, password);
+    console.log("Login:", email, contrasena);
+
+    // Preparamos los datos para enviar
+    const data = { correo: email, contrasena: contrasena };
+
+    // Llamamos a la función de inicio de sesión
+    inicio_sesion(data).then((info) => {
+
+      if (info.code === 200) {
+        mensajes(info.msg, "Has Ingresado al Sistema", "success");
+        router.push("/plantilla");
+        return;
+      }else{
+        mensajes(info.msg, "Error", "error");
+        return;
+      }
+
+    });
   };
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -61,15 +85,15 @@ export default function LoginPage() {
                 type="password"
                 className="input-field pl-10"
                 placeholder="Ingresa tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
                 required
               />
             </div>
           </div>
 
           {/* BOTÓN */}
-          <button 
+          <button
             type="submit"
             className="btn-primary w-full py-2 flex justify-center"
           >
@@ -78,15 +102,15 @@ export default function LoginPage() {
         </form>
 
         {/* Recuperar */}
-<div className="mt-6 text-center text-sm text-muted-foreground">
-  ¿Olvidaste tu contraseña?   
-  <span className="text-green-600 font-medium">
-     Contactate con el administrador
-  </span>
-</div>
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          ¿Olvidaste tu contraseña?
+          <span className="text-green-600 font-medium">
+            Contactate con el administrador
+          </span>
+        </div>
 
-        
-<div className="mt-6 text-center text-sm text-muted-foreground">
+
+        <div className="mt-6 text-center text-sm text-muted-foreground">
           ¿Aún no estas registrado?{' '}
           <Link href="/user/registro" className="text-blue-600 hover:underline font-medium">
             Envia una solicitud de registro
