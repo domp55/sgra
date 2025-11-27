@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* 1. MODO CLARO (Por defecto) */
+:root {
+  /* Forzamos al navegador a pintar controles nativos (scrollbars) en claro */
+  color-scheme: light; 
+
+  /* Definición de colores claros */
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  
+  --border: #e5e7eb;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+}
+
+/* 2. MODO OSCURO (Activado SOLO por la clase .dark) */
+/* NOTA: NO usamos @media aquí para que el botón tenga el control total */
+.dark {
+  /* Forzamos al navegador a pintar controles nativos en oscuro */
+  color-scheme: dark;
+
+  /* Definición de colores oscuros */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  
+  --border: #262626;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
+}
+
+/* 3. Configuración de Tema (Tailwind v4) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  /* Fuentes base */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* 4. Estilos Base */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  @apply antialiased;
+  /* Transición suave de color de fondo al cambiar tema */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 5. Componentes Reutilizables */
+@layer components {
+  /* Contenedor de Tablas */
+  .table-container {
+    @apply w-full overflow-hidden rounded-xl border border-border shadow-sm bg-background;
+  }
+  
+  /* Tabla */
+  .data-table {
+    @apply w-full text-sm text-left;
+  }
+  .data-table thead {
+    @apply bg-muted text-muted-foreground font-medium border-b border-border;
+  }
+  .data-table th {
+    @apply px-4 py-3 whitespace-nowrap;
+  }
+  .data-table td {
+    @apply px-4 py-3 border-b border-border transition-colors;
+  }
+  .data-table tr:hover td {
+    @apply bg-muted/50;
+  }
+
+  /* Botones */
+  .btn-primary {
+    @apply px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity text-sm font-medium cursor-pointer flex items-center justify-center gap-2;
+  }
+  
+  /* Inputs */
+  .input-field {
+    @apply px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 w-full transition-all placeholder:text-muted-foreground;
+  }
+}
