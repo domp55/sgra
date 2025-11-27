@@ -99,6 +99,30 @@ class CuentaController {
             });
         }
     }
+
+            // HU3: Desactivar usuarios --por parte del admin
+    async desactivarCuenta(req, res) {
+        try {
+            const { external } = req.params;
+
+            const cuenta = await Cuenta.findOne({ where: { external } });
+
+            if (!cuenta) {
+                return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+            }
+
+            cuenta.estado = false;
+            await cuenta.save();
+
+            res.status(200).json({ mensaje: "Cuenta desactivada exitosamente" });
+
+        } catch (error) {
+            res.status(500).json({
+                mensaje: "Error al desactivar",
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new CuentaController();

@@ -7,4 +7,6 @@ router.put('/aprobar/:external', cuentaController.aprobarCuenta);
 
 router.get('/listarCuentas', cuentaController.listarCuentas);
 
+router.put('/desactivar/:external', cuentaController.desactivarCuenta);
+
 module.exports = router;
