@@ -1,28 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Pencil, Ban, KeyRound, Search } from "lucide-react";
+import { CheckCircle, Search } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
-import {
-  listarCuentasAprobadas,
-  desactivarCuenta,
-} from "@/hooks/ServiceCuenta";
+import { listarCuentasPorAprobar, aceptarCuenta } from "@/hooks/ServiceCuenta";
 
 interface DataType {
   external_id: string;
   nombre: string;
   apellido: string;
   correo: string;
-  estado: boolean;
   fecha: string;
 }
 
-export default function GestionUsuarios() {
+export default function CuentasPorAprobar() {
   const [data, setData] = useState<DataType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,7 +34,7 @@ export default function GestionUsuarios() {
 
     try {
       setLoading(true);
-      const resultado = await listarCuentasAprobadas(token);
+      const resultado = await listarCuentasPorAprobar(token);
 
       if (resultado?.response?.status === 401) {
         Cookies.remove("token");
@@ -52,7 +48,6 @@ export default function GestionUsuarios() {
           nombre: item.persona?.nombre || "Sin nombre",
           apellido: item.persona?.apellido || "Sin apellido",
           correo: item.correo,
-          estado: item.estado,
           fecha: new Date(item.createdAt).toLocaleDateString(),
         }));
 
@@ -61,7 +56,7 @@ export default function GestionUsuarios() {
         setData([]);
       }
     } catch (err) {
-      console.error("Error al cargar aprobadas:", err);
+      console.error("Error al cargar pendientes:", err);
       setData([]);
     } finally {
       setLoading(false);
@@ -69,22 +64,18 @@ export default function GestionUsuarios() {
   };
 
   // --------------------------------------------------
-  // Desactivar cuenta con SweetAlert
+  // Aprobar Cuenta
   // --------------------------------------------------
-  const handleDesactivar = async (
-    external: string,
-    nombre: string,
-    apellido: string
-  ) => {
+  const handleAprobar = async (external: string, nombre: string, apellido: string) => {
     const confirmacion = await Swal.fire({
-      title: `¿Desactivar a ${nombre} ${apellido}?`,
-      text: "El usuario perderá acceso al sistema.",
-      icon: "warning",
+      title: `¿Aprobar cuenta de ${nombre} ${apellido} ?`,
+      text: "Esta acción permitirá el acceso al usuario.",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Sí, desactivar",
+      confirmButtonText: "Sí, aprobar",
       cancelButtonText: "Cancelar",
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
     });
 
     if (!confirmacion.isConfirmed) return;
@@ -93,35 +84,26 @@ export default function GestionUsuarios() {
     if (!token) return router.push("/login");
 
     try {
-      await desactivarCuenta(external, token);
+      await aceptarCuenta(external, token);
 
       await Swal.fire({
-        title: "Usuario desactivado",
-        text: "El usuario ya no puede acceder al sistema.",
+        title: "¡Cuenta aprobada!",
+        text: "El usuario ahora puede iniciar sesión.",
         icon: "success",
         confirmButtonText: "Aceptar",
       });
 
       fetchData();
     } catch (err) {
-      console.error("Error al desactivar:", err);
+      console.error("Error al aprobar cuenta:", err);
+
       Swal.fire({
         title: "Error",
-        text: "No se pudo desactivar el usuario.",
+        text: "No se pudo aprobar la cuenta.",
         icon: "error",
+        confirmButtonText: "Aceptar",
       });
     }
-  };
-
-  // --------------------------------------------------
-  // Resetear contraseña (te dejo la estructura)
-  // --------------------------------------------------
-  const handleResetPassword = async (external: string) => {
-    Swal.fire({
-      title: "Función no implementada",
-      text: "Aquí puedes llamar a tu endpoint para resetear la clave.",
-      icon: "info",
-    });
   };
 
   useEffect(() => {
@@ -149,13 +131,12 @@ export default function GestionUsuarios() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Gestión de Usuarios
+                Solicitudes de Registro
               </h1>
               <p className="text-muted-foreground">
-                Administrar cuentas aprobadas del sistema.
+                Cuentas pendientes de aprobación por el administrador.
               </p>
             </div>
-
             <ThemeToggle />
           </div>
 
@@ -178,7 +159,7 @@ export default function GestionUsuarios() {
             </div>
 
             <div className="text-sm text-muted-foreground">
-              Total: <strong>{data.length}</strong> usuarios
+              Total: <strong>{data.length}</strong> pendientes
             </div>
           </div>
 
@@ -190,7 +171,6 @@ export default function GestionUsuarios() {
                   <tr>
                     <th className="px-4 py-3">Nombre</th>
                     <th className="px-4 py-3">Correo</th>
-                    <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3">Fecha</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
@@ -200,76 +180,55 @@ export default function GestionUsuarios() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={5}
-                        className="h-32 text-center text-muted-foreground"
+                        colSpan={4}
+                        className="h-32 text-center text-muted-foreground animate-pulse"
                       >
-                        Cargando usuarios...
+                        Cargando solicitudes...
                       </td>
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={4}
                         className="h-32 text-center text-muted-foreground"
                       >
-                        No se encontraron registros.
+                        No hay solicitudes pendientes.
                       </td>
                     </tr>
                   ) : (
                     filteredData.map((item) => (
                       <tr
                         key={item.external_id}
-                        className="hover:bg-muted/50 transition-colors"
+                        className="hover:bg-muted/50 transition-colors group"
                       >
-                        <td className="px-4 py-3 font-medium">
+                        <td className="px-4 py-3 font-medium text-foreground">
                           {item.nombre} {item.apellido}
                         </td>
-
                         <td className="px-4 py-3 text-muted-foreground">
                           {item.correo}
                         </td>
-
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                              item.estado
-                                ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400"
-                            }`}
-                          >
-                            {item.estado ? "Activo" : "Inactivo"}
-                          </span>
-                        </td>
-
                         <td className="px-4 py-3 text-muted-foreground">
                           {item.fecha}
                         </td>
-
-                        {/* ICONOS SIEMPRE VISIBLES */}
                         <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end items-center gap-2 opacity-100 transition-opacity">
                             <button
                               onClick={() =>
-                                handleResetPassword(item.external_id)
-                              }
-                              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-amber-100 text-amber-600 dark:hover:bg-amber-900/30 dark:text-amber-400"
-                            >
-                              <KeyRound size={17} />
-                              <span className="text-sm">Restablecer</span>
-                            </button>
-
-                            <button
-                              onClick={() =>
-                                handleDesactivar(
+                                handleAprobar(
                                   item.external_id,
                                   item.nombre,
                                   item.apellido
+                             
                                 )
                               }
-                              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-red-100 text-red-600 dark:hover:bg-red-900/30 dark:text-red-400"
+                              title="Aprobar Cuenta"
+                              className="flex items-center gap-1 px-2 py-1.5 rounded-md 
+                                hover:bg-green-100 text-green-600 
+                                dark:hover:bg-green-900/30 dark:text-green-400 
+                                transition-colors"
                             >
-                              <Ban size={17} />
-                              <span className="text-sm">Desactivar</span>
+                              <CheckCircle size={16} />
+                              <span className="text-sm font-medium">Aceptar</span>
                             </button>
                           </div>
                         </td>
@@ -279,11 +238,6 @@ export default function GestionUsuarios() {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* PIE */}
-          <div className="text-sm text-muted-foreground pt-2">
-            Mostrando {filteredData.length} usuarios
           </div>
         </div>
       </main>

@@ -3,10 +3,14 @@ const cuentaController = require('../controller/cuentaController');
 
 router.post('/registro', cuentaController.registrar);
 
-router.put('/aprobar/:external', cuentaController.aprobarCuenta);
+router.patch('/aprobar/:external', cuentaController.aprobarCuenta);
 
-router.get('/listarCuentas', cuentaController.listarCuentas);
+//router.get('/listarCuentas', cuentaController.listarCuentas);
+router.get('/listarCuentasPorAprobar', cuentaController.listarCuentasPorAprobar);
+
+router.get('/listarCuentasAprobadas', cuentaController.listarCuentasAprobadas);
 
 router.patch('/desactivar/:external', cuentaController.desactivarCuenta);
+ 
 
 module.exports = router;
