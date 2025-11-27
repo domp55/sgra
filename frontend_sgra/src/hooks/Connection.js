@@ -1,4 +1,5 @@
-const URL_BACKEND= process.env.API;
+const URL_BACKEND = "http://localhost:3001";
+
 
 
 import axios from 'axios';
@@ -39,4 +40,22 @@ export const GET = async (resource, token = "NONE") => {
         }
     }
     return await axios.get(URL_BACKEND + resource, headers);
+}
+
+
+export const PATCH = async (resource, token = "NONE") => {
+    let headers = {
+        headers: {
+            "Accept": "application/json",
+        }
+    }
+    if (token != "NONE") {
+        headers = {
+            headers: {
+                "Accept": "application/json",
+                "X-Access-Token": token,
+            }
+        }
+    }
+    return await axios.patch(URL_BACKEND + resource, headers);
 }

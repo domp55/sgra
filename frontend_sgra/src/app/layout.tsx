@@ -22,9 +22,7 @@ export default function RootLayout({
         <ThemeProvider>
           {/* Contenedor Flex Principal */}
           <div className="flex min-h-screen">
-            
-            {/* 1. El Sidebar (Izquierda) */}
-            <Sidebar />
+          
             
             {/* 2. El Contenido Principal (Derecha) */}
             <main className="flex-1 overflow-auto bg-background">

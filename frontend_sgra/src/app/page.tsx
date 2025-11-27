@@ -1,197 +1,98 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-// Importamos los iconos
-import { Pencil, Trash2, Plus, Search } from 'lucide-react'; 
+import { useState } from 'react';
+import { Mail, Lock } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
+import Link from 'next/link';
 
-import ThemeToggle from '@/components/ThemeToggle'; 
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-// 1. DEFINICIÓN DE TIPOS
-interface DataType {
-  id: number;
-  nombre: string;
-  correo: string;
-  estado: 'Activo' | 'Inactivo';
-  fecha: string;
-}
-
-export default function PageTemplate() {
-  // ==========================================
-  // 1. ESTADOS Y HOOKS
-  // ==========================================
-  const [data, setData] = useState<DataType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentItem, setCurrentItem] = useState<DataType | null>(null);
-
-  // ==========================================
-  // 2. MÉTODOS Y LÓGICA
-  // ==========================================
-  
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setTimeout(() => {
-        setData([
-          { id: 1, nombre: 'Juan Pérez', correo: 'juan@test.com', estado: 'Activo', fecha: '2024-01-10' },
-          { id: 2, nombre: 'Maria Lopez', correo: 'maria@test.com', estado: 'Inactivo', fecha: '2024-02-15' },
-          { id: 3, nombre: 'Carlos Ruiz', correo: 'carlos@test.com', estado: 'Activo', fecha: '2024-03-20' },
-        ]);
-        setLoading(false);
-      }, 1000);
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-      setLoading(false);
-    }
+  const handleLogin = (e: any) => {
+    e.preventDefault();
+    console.log("Login:", email, password);
   };
 
-  const handleDelete = (id: number) => {
-    if(!confirm("¿Estás seguro de eliminar este registro?")) return;
-    console.log("Eliminando ID:", id);
-    // Lógica de eliminación
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const filteredData = data.filter(item => 
-    item.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // ==========================================
-  // 3. RENDERIZADO (UI)
-  // ==========================================
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 space-y-6">
-      
-      {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">Administra y visualiza los registros del sistema.</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          
-          {/* Botón Nuevo con Icono */}
-          <button 
-            onClick={() => { setIsEditing(false); setCurrentItem(null); console.log("Abrir modal crear"); }}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} />
-            <span>Nuevo Registro</span>
-          </button>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+
+      {/* Switch de Tema arriba a la derecha */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
       </div>
 
-      <hr className="border-border" />
+      {/* Card del Login */}
+      <div className="w-full max-w-md bg-card border border-border shadow-md rounded-xl p-8">
 
-      {/* --- BUSCADOR --- */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-muted/20 p-4 rounded-lg border border-border">
-        <div className="relative w-full max-w-sm">
-            {/* Icono de búsqueda absoluto */}
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                <Search size={16} />
+        {/* Títulos */}
+        <h1 className="text-2xl font-bold text-center text-foreground">
+          Iniciar Sesión
+        </h1>
+        <p className="text-center text-muted-foreground mb-6">
+          Bienvenido al sistema SGRA
+        </p>
+
+        {/* FORM */}
+        <form onSubmit={handleLogin} className="space-y-5">
+
+          {/* CORREO */}
+          <div>
+            <label className="text-sm text-muted-foreground">Correo</label>
+            <div className="relative mt-1">
+              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="email"
+                className="input-field pl-10"
+                placeholder="correo@ejemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre..." 
-              className="input-field pl-9" // Padding left extra para el icono
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Total registros: {data.length}
-        </div>
-      </div>
+          </div>
 
-      {/* --- TABLA --- */}
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Estado</th>
-              <th>Fecha</th>
-              <th className="text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="h-32 text-center text-muted-foreground">
-                  Cargando datos...
-                </td>
-              </tr>
-            ) : filteredData.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No se encontraron resultados.
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((item) => (
-                <tr key={item.id}>
+          {/* CONTRASEÑA */}
+          <div>
+            <label className="text-sm text-muted-foreground">Contraseña</label>
+            <div className="relative mt-1">
+              <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="password"
+                className="input-field pl-10"
+                placeholder="Ingresa tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+          </div>
 
-                  <td>{item.nombre}</td>
-                  <td>{item.correo}</td>
-                  <td>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      item.estado === 'Activo' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </td>
-                  <td className="text-muted-foreground">{item.fecha}</td>
-                  
-                  {/* --- AQUÍ ESTÁN LOS CAMBIOS PRINCIPALES --- */}
-                  <td className="text-right">
-                    <div className="flex justify-end gap-2">
-                        {/* Botón Editar */}
-                        <button 
-                          onClick={() => console.log('Edit', item.id)}
-                          className="p-2 rounded-md hover:bg-blue-100 text-blue-600 dark:hover:bg-blue-900/30 dark:text-blue-400 transition-colors"
-                          title="Editar usuario"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        
-                        {/* Botón Eliminar */}
-                        <button 
-                          onClick={() => handleDelete(item.id)}
-                          className="p-2 rounded-md hover:bg-red-100 text-red-600 dark:hover:bg-red-900/30 dark:text-red-400 transition-colors"
-                          title="Eliminar usuario"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                    </div>
-                  </td>
-                  {/* ------------------------------------------ */}
-                  
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          {/* BOTÓN */}
+          <button 
+            type="submit"
+            className="btn-primary w-full py-2 flex justify-center"
+          >
+            Iniciar Sesión
+          </button>
+        </form>
 
-      {/* --- PAGINACIÓN --- */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
-        <div>Mostrando {filteredData.length} resultados</div>
-        <div className="flex gap-2">
-          <button className="px-3 py-1 border border-border rounded-md disabled:opacity-50 hover:bg-muted" disabled>Anterior</button>
-          <button className="px-3 py-1 border border-border rounded-md hover:bg-muted">Siguiente</button>
+        {/* Recuperar */}
+<div className="mt-6 text-center text-sm text-muted-foreground">
+  ¿Olvidaste tu contraseña?   
+  <span className="text-green-600 font-medium">
+     Contactate con el administrador
+  </span>
+</div>
+
+        
+<div className="mt-6 text-center text-sm text-muted-foreground">
+          ¿Aún no estas registrado?{' '}
+          <Link href="/user/registro" className="text-blue-600 hover:underline font-medium">
+            Envia una solicitud de registro
+          </Link>
         </div>
       </div>
-
     </div>
   );
 }
