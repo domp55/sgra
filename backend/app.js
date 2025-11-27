@@ -1,21 +1,26 @@
 const express = require('express');
-const sequelize = require('./config/configBd');
-const cors = require('cors')
-
+const cors = require('cors');
+const db = require('./models'); 
 
 const app = express();
 const PORT = 3000;
-sequelize.sync()
-    .then(() => {
-        console.log('Base de datos sincronizada');
-    })
-    .catch(error => {
-        console.error('Error al sincronizar la base de datos:', error);
-    });
+
+app.use(express.json());
+app.use(cors());
+app.use(express.json());
+
+db.sequelize.sync({ alter: true })  
+  .then(() => {
+    console.log('Base de datos sincronizada');
+  })
+  .catch(error => {
+    console.error('Error al sincronizar la base de datos:', error);
+  });
 
 app.get('/', (req, res) => {
-    res.send('');
+  res.send('Servidor funcionando');
 });
+
 app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+  console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
 });

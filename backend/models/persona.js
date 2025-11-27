@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     persona.associate = function (models) {
-        persona.hasOne(models.cuenta, { foreignKey: 'personaId', as: cuenta });
+        persona.hasOne(models.cuenta, { foreignKey: 'personaId', as: "cuenta" });
     };
 
     return persona;

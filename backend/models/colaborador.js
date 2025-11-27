@@ -1,6 +1,6 @@
 // models/colaborador.js
 module.exports = (sequelize, DataTypes) => {
-    const Colaborador = sequelize.define("Colaborador", {
+    const Colaborador = sequelize.define("colaborador", {
         rolID: {
             type: DataTypes.INTEGER,
             allowNull: false
@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false
         }
-    });
+    },{ freezeTableName: true});
 
     Colaborador.associate = (models) => {
         Colaborador.belongsTo(models.cuenta, { foreignKey: "cuentaID" });

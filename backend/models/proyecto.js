@@ -8,14 +8,14 @@ module.exports = (sequelize, DataTypes) => {
         external: {
             type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4
         }
-    });
+    },{ freezeTableName: true });
 
     proyecto.associate = (models) => {
         proyecto.hasMany(models.colaborador, {
             foreignKey: "proyectoId",
             as: "colaborador"
         });
-    };
+    }
 
     return proyecto;
 };

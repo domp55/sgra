@@ -10,6 +10,8 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4
         }
+    }, {
+        freezeTableName: true  
     });
 
     rol.associate = (models) => {
