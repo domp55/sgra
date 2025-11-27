@@ -1,40 +1,40 @@
 // controllers/cuentaController.js
-const Cuenta = require('../models/cuenta');
-const Persona = require('../models/persona');
-const db = require('../config/configBd'); 
-const bcrypt = require('bcrypt'); 
+
+const db = require("../models"); // <- ESTE ES EL IMPORT CORRECTO
+const Cuenta = db.cuenta;
+const Persona = db.persona;
+const Colaborador = db.colaborador;
+
+const bcrypt = require("bcrypt");
 
 class CuentaController {
-
+    
     // HU5: Registro de usuarios solicitantes
     async registrar(req, res) {
-        // Iniciamos una transacción (si algo falla, se borra todo)
-        const t = await db.transaction();
+        const t = await db.sequelize.transaction(); // Transacción correcta
 
         try {
-            // 1. Obtener datos del frontend (body)
             const { nombre, apellido, cedula, correo, contrasena } = req.body;
 
-            // 2. Encriptar la contraseña (seguridad básica)
+            // Encriptar contraseña
             const salt = await bcrypt.genSalt(10);
-            const hashContrasena = await bcrypt.hash(contrasena, salt);
+            const hash = await bcrypt.hash(contrasena, salt);
 
-            // 3. Crear la Persona primero
+            // Crear persona
             const nuevaPersona = await Persona.create({
                 nombre,
                 apellido,
-                cedula,
-            }, { transaction: t }); // ¡Importante pasar la transacción 't'!
-
-            // 4. Crear la Cuenta vinculada a la persona
-            const nuevaCuenta = await Cuenta.create({
-                correo,
-                contrasena: hashContrasena, // Guardamos la encriptada
-                estado: false, // Por defecto inactivo hasta que aprueben (HU6)
-                personaId: nuevaPersona.id, // Aquí hacemos el vínculo manual
+                cedula
             }, { transaction: t });
 
-            // 5. Si todo salió bien, confirmamos los cambios en la BD
+            // Crear cuenta asociada
+            const nuevaCuenta = await Cuenta.create({
+                correo,
+                contraseña: hash,   // Tu modelo usa "contraseña" con Ñ
+                estado: false,
+                personaId: nuevaPersona.id
+            }, { transaction: t });
+
             await t.commit();
 
             res.status(201).json({
@@ -43,33 +43,60 @@ class CuentaController {
             });
 
         } catch (error) {
-            // 6. Si algo falló, deshacemos todo
             await t.rollback();
             console.log(error);
-            res.status(500).json({ mensaje: "Error al registrar", error: error.message });
+            res.status(500).json({
+                mensaje: "Error al registrar",
+                error: error.message
+            });
         }
     }
 
     // HU6: Aprobación de solicitudes
     async aprobarCuenta(req, res) {
         try {
-            const { external } = req.params; // El ID viene por la URL
+            const { external } = req.params;
 
-            // Buscar la cuenta por su ID externo (es más seguro que usar el ID 1, 2, 3)
-            const cuenta = await Cuenta.findOne({ where: { external: external } });
+            const cuenta = await Cuenta.findOne({ where: { external } });
 
             if (!cuenta) {
                 return res.status(404).json({ mensaje: "Cuenta no encontrada" });
             }
 
-            // Actualizar estado
             cuenta.estado = true;
             await cuenta.save();
 
             res.status(200).json({ mensaje: "Cuenta aprobada exitosamente" });
 
         } catch (error) {
-            res.status(500).json({ mensaje: "Error al aprobar", error: error.message });
+            res.status(500).json({
+                mensaje: "Error al aprobar",
+                error: error.message
+            });
+        }
+    }
+
+    // HU7: Listar cuentas
+    async listarCuentas(req, res) {
+        try {
+            const cuentas = await Cuenta.findAll({
+                include: [
+                    { model: Persona, as: "persona" },
+                    { model: Colaborador, as: "colaborador" }
+                ]
+            });
+
+            if (cuentas.length === 0) {
+                return res.status(404).json({ mensaje: "No hay cuentas registradas" });
+            }
+
+            res.status(200).json(cuentas);
+
+        } catch (error) {
+            res.status(500).json({
+                mensaje: "Error al listar cuentas",
+                error: error.message
+            });
         }
     }
 }

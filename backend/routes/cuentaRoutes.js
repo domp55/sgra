@@ -5,4 +5,6 @@ router.post('/registro', cuentaController.registrar);
 
 router.put('/aprobar/:external', cuentaController.aprobarCuenta);
 
+router.get('/listarCuentas', cuentaController.listarCuentas);
+
 module.exports = router;
