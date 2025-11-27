@@ -15,4 +15,5 @@ class colaboradorController {
         }
     };
 }
+// hshshshs
 module.exports = new colaboradorController();
