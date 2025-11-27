@@ -11,7 +11,7 @@ class loginController {
 
     async sesion(req, res) {
         let errors = validationResult(req);
-
+        console.log(req.body)
         // Validar errores
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -35,7 +35,7 @@ class loginController {
             });
 
             // Si no existe
-            if (!login) {
+            if (!login || login == null) {
                 return res.status(400).json({
                     msg: "USUARIO NO ENCONTRADO",
                     code: 400

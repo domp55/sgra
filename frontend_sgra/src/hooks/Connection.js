@@ -1,27 +1,27 @@
 const URL_BACKEND = "http://localhost:3001";
 
+import axios from "axios";
 
-
-import axios from 'axios';
-
-// Metodo POST
-export const POST = async (resource, data, token = "NONE") => {
-    let headers = {
-        headers: {
+export const POST = async (resource, data, token = "") => {
+        const headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
+        };
+
+        // Si hay token, se agrega pero NO se eliminan otros headers
+        if (token.trim() !== "") {
+            headers["X-Access-Token"] = token;
         }
-    }
-    if (token != "NONE") {
-        headers = {
-            headers: {
-                "Accept": "application/json",
-                "X-Access-Token": token
-            }
-        }
-    }
-    return await axios.post(URL_BACKEND + resource, data, headers)
-}
+
+        const response = await axios.post(
+            URL_BACKEND + resource,
+            data,
+            { headers }
+        );
+
+        return response.data;  // Devolver solo los datos
+
+};
 
 
 
