@@ -28,7 +28,7 @@ export default function LoginPage() {
         mensajes(info.msg, "Has Ingresado al Sistema", "success");
         router.push("/admin/lista");
         return;
-      }else{
+      } else {
         mensajes(info.msg, "Error", "error");
         return;
       }
@@ -72,6 +72,8 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                onInvalid={(e: any) => e.target.setCustomValidity("Por favor ingresa tu correo")}
+                onInput={(e: any) => e.target.setCustomValidity("")}
               />
             </div>
           </div>
@@ -88,6 +90,8 @@ export default function LoginPage() {
                 value={contrasena}
                 onChange={(e) => setContrasena(e.target.value)}
                 required
+                onInvalid={(e: any) => e.target.setCustomValidity("Por favor ingresa tu contraseña")}
+                onInput={(e: any) => e.target.setCustomValidity("")}
               />
             </div>
           </div>
