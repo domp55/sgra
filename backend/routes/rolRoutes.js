@@ -1,7 +1,12 @@
-const router = require('express').Router();
-const rol = require('../controller/rolcontroller');
+const express = require("express");
+const router = express.Router();
+const RolController = require("../controller/rolController");
+const authAdmin = require("../middleware/authAdmin");
 
-router.get('/listarRoles', rol.listarroles);
-router.post('/registrarRol', rol.registrarRol);
+// Listar roles (solo admin)
+router.get("/listar", authAdmin, RolController.listarroles);
+
+// Registrar rol (solo admin)
+router.post("/registrar", authAdmin, RolController.registrarRol);
 
 module.exports = router;

@@ -3,7 +3,8 @@ const { validationResult } = require('express-validator');
 const models = require('../models');
 const usuario = models.persona;
 const Cuenta = models.cuenta;
-const rol = models.rol;
+const Persona = models.persona;
+const Rol = models.rol;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config(); // cargar variables de entorno
@@ -13,83 +14,91 @@ class LoginController {
     // -------------------------
     // Iniciar sesión
     // -------------------------
-    async sesion(req, res) {
+async sesion(req, res) {
+    console.log('REQ BODY:', req.body);
 
-        console.log('REQ BODY:', req.body);
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                msg: "Datos faltantes o inválidos",
-                code: 400,
-                errors: errors.array()
-            });
-        }
-
-        const { correo, contrasena } = req.body;
-
-        try {
-            const login = await Cuenta.findOne({
-                where: { correo },
-                include: [
-                    {
-                        model: usuario,
-                        as: 'persona',
-                        attributes: ['apellido', 'nombre', 'external'],
-                    }
-                ]
-            });
-
-            console.log('LOGIN DB:', login);
-
-
-            if (!login) {
-                return res.status(400).json({ msg: "USUARIO NO ENCONTRADO", code: 400 });
-            }
-
-            if (!login.persona) {
-                return res.status(400).json({ msg: "USUARIO SIN PERFIL ASOCIADO", code: 400 });
-            }
-
-            if (!login.estado) {
-                return res.status(403).json({ msg: "USUARIO INACTIVO, EL ADMIN DEBE ACEPTARLO", code: 403 });
-            }
-
-            if (!login.contrasena) {
-                return res.status(400).json({ msg: "CUENTA SIN CONTRASEÑA REGISTRADA", code: 400 });
-            }
-
-            const passwordValida = bcrypt.compareSync(contrasena, login.contrasena);
-            if (!passwordValida) {
-                return res.status(401).json({ msg: "CLAVE INCORRECTA", code: 401 });
-            }
-
-            const llave = process.env.KEY_SQ;
-            if (!llave) {
-                return res.status(500).json({ msg: "CLAVE JWT NO CONFIGURADA", code: 500 });
-            }
-
-            const tokenData = {
-                external: login.external,
-                user: login.persona.nombre,
-                check: true
-            };
-
-            const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
-
-            return res.status(200).json({
-                token,
-                user: `${login.persona.nombre} ${login.persona.apellido}`,
-                msg: `Bienvenid@ ${login.persona.nombre} ${login.persona.apellido}`,
-                correo: login.correo,
-                external_id: login.persona.external,
-                code: 200
-            });
-
-        } catch (error) {
-            console.error("Error en login:", error);
-            return res.status(500).json({ msg: "ERROR INTERNO DEL SERVIDOR", code: 500, error: error.message });
-        }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            msg: "Datos faltantes o inválidos",
+            code: 400,
+            errors: errors.array()
+        });
     }
+
+    const { correo, contrasena } = req.body;
+
+    try {
+        const login = await Cuenta.findOne({
+            where: { correo },
+            include: [
+                {
+                    model: Persona, // tu modelo de persona
+                    as: 'persona',
+                    attributes: ['apellido', 'nombre', 'external'],
+                },
+                {
+                    model: Rol, // tu modelo de roles
+                    as: 'rol',
+                    attributes: ['nombre']
+                }
+            ]
+        });
+
+        console.log('LOGIN DB:', login);
+
+        if (!login) {
+            return res.status(400).json({ msg: "USUARIO NO ENCONTRADO", code: 400 });
+        }
+
+        if (!login.persona) {
+            return res.status(400).json({ msg: "USUARIO SIN PERFIL ASOCIADO", code: 400 });
+        }
+
+        if (!login.estado) {
+            return res.status(403).json({ msg: "USUARIO INACTIVO, EL ADMIN DEBE ACEPTARLO", code: 403 });
+        }
+
+        if (!login.contrasena) {
+            return res.status(400).json({ msg: "CUENTA SIN CONTRASEÑA REGISTRADA", code: 400 });
+        }
+
+        const passwordValida = bcrypt.compareSync(contrasena, login.contrasena);
+        if (!passwordValida) {
+            return res.status(401).json({ msg: "CLAVE INCORRECTA", code: 401 });
+        }
+
+        const llave = process.env.KEY_SQ;
+        if (!llave) {
+            return res.status(500).json({ msg: "CLAVE JWT NO CONFIGURADA", code: 500 });
+        }
+
+        const tokenData = {
+            external: login.persona.external,
+            user: login.persona.nombre,
+            check: true,
+            role: login.rol ? login.rol.nombre : null
+        };
+
+        const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
+
+        return res.status(200).json({
+            token,
+            user: `${login.persona.nombre} ${login.persona.apellido}`,
+            msg: `Bienvenid@ ${login.persona.nombre} ${login.persona.apellido}`,
+            correo: login.correo,
+            external_id: login.persona.external,
+            code: 200,
+            role: login.rol ? login.rol.nombre : null
+        });
+
+    } catch (error) {
+        console.error("Error en login:", error);
+        return res.status(500).json({ msg: "ERROR INTERNO DEL SERVIDOR", code: 500, error: error.message });
+    }
+}
+
+
 
     // -------------------------
     // Registrar admin
@@ -131,7 +140,7 @@ async registrarAdmin(req, res) {
             esAdmin: true,
             estado: true,
             personaId: nuevaPersona.id,
-            rolID: rolAdmin.id
+            nombre: rolAdmin.id
         }, { transaction: t });
 
         await t.commit();

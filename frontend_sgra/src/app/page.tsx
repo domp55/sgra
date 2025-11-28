@@ -16,7 +16,6 @@ export default function LoginPage() {
 
   const handleLogin = (e: any) => {
     e.preventDefault();
-    console.log("Login:", email, contrasena);
 
     // Preparamos los datos para enviar
     const data = { correo: email, contrasena: contrasena };
@@ -24,19 +23,33 @@ export default function LoginPage() {
     // Llamamos a la función de inicio de sesión
     inicio_sesion(data).then((info) => {
 
+      console.log("INFO LOGIN:", info); // para debug
+
       if (info.code === 200) {
+
+        // Guardar mensaje de éxito
         mensajes(info.msg, "Has Ingresado al Sistema", "success");
-        router.push("/admin/lista");
+
+        // Redirección según rol
+        if (info.role === "ADMIN") {
+          console.log("Redirigiendo a admin/lista");
+          router.push("/admin/lista");
+        } else {
+          console.log("Redirigiendo a user/principal");
+          router.push("/user/principal");
+        }
+
         return;
-      }else{
+      } else {
         mensajes(info.msg, "Error", "error");
         return;
       }
 
+    }).catch(err => {
+      console.error("Error en inicio_sesion:", err);
+      mensajes("Error de conexión al servidor", "Error", "error");
     });
   };
-
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -103,13 +116,13 @@ export default function LoginPage() {
 
         {/* Recuperar */}
         <div className="mt-6 text-center text-sm text-muted-foreground">
-          ¿Olvidaste tu contraseña?
+          ¿Olvidaste tu contraseña?{' '}
           <span className="text-green-600 font-medium">
             Contactate con el administrador
           </span>
         </div>
 
-
+        {/* Registro */}
         <div className="mt-6 text-center text-sm text-muted-foreground">
           ¿Aún no estas registrado?{' '}
           <Link href="/user/registro" className="text-blue-600 hover:underline font-medium">

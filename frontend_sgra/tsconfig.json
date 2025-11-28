@@ -37,7 +37,7 @@
     "**/*.mts",
     "build_node/types/**/*.ts",
     "build_node/dev/types/**/*.ts"
-  ],
+, "src/hooks/useAuth.js"  ],
   "exclude": [
     "node_modules"
   ]
