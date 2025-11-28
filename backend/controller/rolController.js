@@ -15,6 +15,16 @@ class RolController {
         }
     };
 
+    registrarRol = async (req, res) => {
+        try {
+            const { nombreRol } = req.body;                
+            const nuevoRol = await rol.create({ nombreRol });
+            res.status(201).json({ mensaje: "Rol registrado exitosamente", rol: nuevoRol });
+        } catch (error) {
+            res.status(500).json({ mensaje: "Error al registrar rol", error: error.message });
+        }
+    };
+
     
 }
 module.exports = new RolController();

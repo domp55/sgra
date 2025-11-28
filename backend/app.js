@@ -6,6 +6,7 @@ const app = express();
 const PORT = 3001;
 const cuentaRouter = require('./routes/cuentaRoutes');
 const loginRouter = require('./routes/loginRoutes');
+const rolRouter = require('./routes/rolRoutes');
 
 app.use(express.json());
 // Middleware para preflight CORS
@@ -20,8 +21,9 @@ app.use(express.json());
 app.use('/api/cuenta',cuentaRouter);
 app.use('/api/colaborador',require('./routes/colaboradorRoutes'));
 app.use('/api/privado', loginRouter);
+app.use('/api/rol', rolRouter);
 
-db.sequelize.sync({ alter: true })
+db.sequelize.sync({ alter: false })
   .then(() => {
     console.log('Base de datos sincronizada');
   })
