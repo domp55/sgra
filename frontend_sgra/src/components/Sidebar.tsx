@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Users, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const menuItems = [
   { name: "Solicitudes de aprobación", href: "/admin/aprobar", icon: Home },
@@ -14,6 +15,30 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [userName, setUserName] = useState<string | null>(null);
+  const [initials, setInitials] = useState<string>("");
+
+  useEffect(() => {
+    const name = sessionStorage.getItem("user");
+
+    if (!name) {
+      router.push("/");
+      return;
+    }
+
+    setUserName(name);
+
+    const ini = name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+    setInitials(ini);
+
+  }, []); // Solo una vez
+
   const handleLogout = () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("external");
@@ -21,20 +46,13 @@ export default function Sidebar() {
     router.push("/");
   };
 
-  // Obtener el nombre del usuario desde sessionStorage
-  const userName = sessionStorage.getItem("user") || "Usuario";
-  
-  // Generar iniciales
-  const initials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  if (!userName) {
+    return null; // evita render mientras carga sessionStorage
+  }
 
   return (
     <aside className="w-64 h-screen sticky top-0 border-r border-border bg-background flex flex-col hidden md:flex transition-all">
-      
+
       {/* LOGO / HEADER */}
       <div className="h-16 flex items-center px-6 border-b border-border">
         <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
@@ -71,18 +89,20 @@ export default function Sidebar() {
       {/* FOOTER: Usuario + Logout */}
       <div className="p-4 border-t border-border bg-muted/20">
         <div className="flex flex-col gap-4">
-          
-          {/* Tarjeta de Usuario */}
+
+          {/* Tarjeta Usuario */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
               {initials}
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium truncate text-foreground">{userName}</span>
+              <span className="text-sm font-medium truncate text-foreground">
+                {userName}
+              </span>
             </div>
           </div>
 
-          {/* Botón de Cerrar Sesión */}
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center justify-center gap-2 w-full px-3 py-2 text-xs font-medium text-red-500 border border-red-200 rounded-md hover:bg-red-50 dark:hover:bg-red-900/10 dark:border-red-900/30 transition-colors"
@@ -90,6 +110,7 @@ export default function Sidebar() {
             <LogOut size={14} />
             Cerrar Sesión
           </button>
+
         </div>
       </div>
     </aside>
