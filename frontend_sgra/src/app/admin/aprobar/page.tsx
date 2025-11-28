@@ -18,6 +18,8 @@ interface DataType {
   fecha: string;
 }
 
+const token = sessionStorage.getItem("token");
+
 export default function CuentasPorAprobar() {
   const [data, setData] = useState<DataType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,15 +31,14 @@ export default function CuentasPorAprobar() {
   // Cargar datos
   // --------------------------------------------------
   const fetchData = async () => {
-    const token = sessionStorage.getItem("token");
-    if (!token) return router.push("/login");
+    if (!token) return router.push("/");
 
     try {
       setLoading(true);
       const resultado = await listarCuentasPorAprobar(token);
 
       if (resultado?.response?.status === 401) {
-        sessionStorage.remove("token");
+        sessionStorage.removeItem("token");
         router.push("/");
         return;
       }
@@ -68,7 +69,7 @@ export default function CuentasPorAprobar() {
   // --------------------------------------------------
   const handleAprobar = async (external: string, nombre: string, apellido: string) => {
     const confirmacion = await Swal.fire({
-      title: `¿Aprobar cuenta de ${nombre} ${apellido} ?`,
+      title: `¿Aprobar cuenta de ${nombre} ${apellido}?`,
       text: "Esta acción permitirá el acceso al usuario.",
       icon: "question",
       showCancelButton: true,
@@ -80,8 +81,7 @@ export default function CuentasPorAprobar() {
 
     if (!confirmacion.isConfirmed) return;
 
-    const token = Cookies.get("token");
-    if (!token) return router.push("/login");
+    if (!token) return router.push("/");
 
     try {
       await aceptarCuenta(external, token);
@@ -115,7 +115,7 @@ export default function CuentasPorAprobar() {
   // --------------------------------------------------
   const filteredData = data.filter(
     (item) =>
-      `${item.nombre} ${item.apellido}`
+      (`${item.nombre} ${item.apellido}`)
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       item.correo.toLowerCase().includes(searchTerm.toLowerCase())
@@ -218,7 +218,6 @@ export default function CuentasPorAprobar() {
                                   item.external_id,
                                   item.nombre,
                                   item.apellido
-                             
                                 )
                               }
                               title="Aprobar Cuenta"

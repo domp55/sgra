@@ -6,6 +6,7 @@ const db = require('../config/configBd');
 const bcrypt = require('bcrypt');
 var Cuenta = models.cuenta;
 let jwt = require('jsonwebtoken');
+const nodemailer = require("nodemailer");
 
 class loginController {
 
@@ -132,5 +133,55 @@ class loginController {
         }
     }
     
+    async restablecerContraseña(req, res) {
+        const { correo } = req.body;
+
+        try {
+            const cuenta = await Cuenta.findOne({
+                where: { correo },
+                include: [{ model: usuario, as: 'persona', attributes: ['nombre', 'apellido', 'cedula'] }]
+            });
+
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS
+                }
+            });
+
+            // Mensaje a enviar
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: cuenta.correo,
+                subject: 'Restablecimiento de contraseña',
+                text: `Hola ${cuenta.persona.nombre}, tu contraseña temporal será tu número de cédula (${cuenta.persona.cedula}). 
+Por favor, actualiza tu contraseña al iniciar sesión nuevamente.`
+            };
+
+            // Enviar correo
+            await transporter.sendMail(mailOptions);
+
+            // Actualizar contraseña en la base de datos
+            const salt = await bcrypt.genSalt(10);
+            const hashCedula = await bcrypt.hash(cuenta.persona.cedula, salt);
+
+            cuenta.contrasena = hashCedula;
+            await cuenta.save();
+
+            return res.json({
+                msg: "Correo enviado y contraseña restablecida temporalmente",
+                code: 200
+            });
+
+        } catch (error) {
+            console.error("Error al restablecer contraseña:", error);
+            return res.status(500).json({
+                msg: "Error en servidor",
+                code: 500,
+                error: error.message
+            });
+        }
+    }
 }
 module.exports = loginController;

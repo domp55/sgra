@@ -62,5 +62,5 @@ export async function registroUsuario(data) {
     return error;
   }
 
-  return datos.data;
+  return datos;
 }

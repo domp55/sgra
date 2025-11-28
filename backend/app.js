@@ -8,7 +8,13 @@ const cuentaRouter = require('./routes/cuentaRoutes');
 const loginRouter = require('./routes/loginRoutes');
 
 app.use(express.json());
-app.use(cors());
+// Middleware para preflight CORS
+// Permitir CORS para todas las rutas
+app.use(cors({
+    origin: "http://localhost:3000", // tu frontend (ajústalo según corresponda)
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-Access-Token"]
+}));
 
 app.use(express.json());
 app.use('/api/cuenta',cuentaRouter);

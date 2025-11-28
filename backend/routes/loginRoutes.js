@@ -13,4 +13,9 @@ router.post('/cuenta/sesion', [
 // Registrar admin
 router.post('/admin/registrar', loginController.registrarAdmin);
 
+// Registrar admin
+router.put('/admin/restablecer', loginController.restablecerContraseña);
+
+
+
 module.exports = router;
