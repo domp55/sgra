@@ -29,15 +29,15 @@ class CuentaController {
       const cedulaExiste = await Persona.findOne({ where: { cedula } });
       if (cedulaExiste) {
         return res.status(400).json({
-          mensaje: "La cedula ya está registrada en el sistema."
+          mensaje: "La cédula ya está registrada en el sistema."
         });
       }
 
-      // Verificar que el rol por defecto (ID = 1) exista
-      const rolPorDefecto = await Rol.findByPk(1);
+      // Verificar que el rol "DESARROLLADOR" exista
+      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLADOR" } });
       if (!rolPorDefecto) {
         return res.status(500).json({
-          mensaje: "Error: No existe el rol por defecto (ID = 1)."
+          mensaje: "Error: No existe el rol por defecto 'DESARROLLADOR'."
         });
       }
 
@@ -47,11 +47,7 @@ class CuentaController {
 
       // Crear Persona
       const nuevaPersona = await Persona.create(
-        {
-          nombre,
-          apellido,
-          cedula
-        },
+        { nombre, apellido, cedula },
         { transaction: t }
       );
 
@@ -62,7 +58,7 @@ class CuentaController {
           contrasena: hash,
           estado: false,
           personaId: nuevaPersona.id,
-          rolID: 1,    // ← ASIGNACIÓN DEL ROL POR DEFECTO
+          rolID: rolPorDefecto.id,  // Asignar el ID del rol DESARROLLADOR
           esAdmin: false
         },
         { transaction: t }
@@ -77,14 +73,13 @@ class CuentaController {
 
     } catch (error) {
       await t.rollback();
-      console.log(error);
+      console.error("Error al registrar usuario:", error);
       res.status(500).json({
         mensaje: "Error al registrar",
         error: error.message
       });
     }
   }
-
 
   // HU6: Aprobación de solicitudes
   async aprobarCuenta(req, res) {
@@ -136,75 +131,93 @@ console.log(cuentas);
   }
   }
 
-async listarCuentas(req, res) {
-  try {
-    const cuentas = await Cuenta.findAll({
-      attributes: ["correo", "estado", "id", "createdAt"],
-      include: [
-        {
-          model: Persona,
-          as: "persona",
-          attributes: ["nombre", "apellido", "cedula"]
-        },
-        {
-          model: Rol,
-          as: "rol",
-          attributes: ["nombre"] // tu modelo usa "nombre"
-        }
-      ]
-    });
-
-    // 🌐 Validación: ¿hay cuentas?
-    if (!cuentas || cuentas.length === 0) {
-      return res.status(404).json({
-        mensaje: "No existen usuarios registrados",
-        usuarios: []
+  async listarCuentas(req, res) {
+    try {
+      const cuentas = await Cuenta.findAll({
+        attributes: ["correo", "estado", "id", "createdAt", "external"],
+        include: [
+          {
+            model: Persona,
+            as: "persona",
+            attributes: ["nombre", "apellido", "cedula"]
+          },
+          {
+            model: Rol,
+            as: "rol",
+            attributes: ["nombre"]
+          }
+        ]
       });
-    }
 
-    // 🔍 Transformación y validaciones avanzadas
-    const usuarios = cuentas
-      .map((c) => {
-        if (!c.persona) {
-          console.warn(`⚠ Cuenta ID ${c.id} sin persona asociada.`);
-          return null;
-        }
+      if (!cuentas || cuentas.length === 0) {
+        return res.status(404).json({
+          mensaje: "No existen usuarios registrados",
+          usuarios: []
+        });
+      }
 
-        return {
-          nombre: `${c.persona.nombre} ${c.persona.apellido}`,
-          cedula: c.persona.cedula,
+      // Filtramos cuentas válidas y que no sean ADMIN
+      const usuarios = cuentas
+        .filter(c => c && c.persona && c.correo && c.rol?.nombre !== "ADMIN")
+        .map(c => ({
+          nombre: `${c.persona.nombre || "Sin nombre"} ${c.persona.apellido || "Sin apellido"}`,
+          cedula: c.persona.cedula || "No disponible",
           correo: c.correo,
-          rol: c.rol ? c.rol.nombre : "Sin rol asignado",   // CORREGIDO
+          rol: c.rol?.nombre || "Sin rol asignado",
           estado: c.estado ? "Activo" : "Inactivo",
-          registrado_en: c.createdAt
-            ? c.createdAt.toISOString().split("T")[0]
-            : "Fecha no disponible"
-        };
-      })
-      .filter((u) => u !== null); // elimino registros corruptos
+          external: c.external,
+          registrado_en: c.createdAt ? c.createdAt.toISOString().split("T")[0] : "Fecha no disponible"
+        }));
 
-    // ⚠ Si todas las cuentas fallaron
-    if (usuarios.length === 0) {
+      if (usuarios.length === 0) {
+        return res.status(200).json({
+          mensaje: "No hay usuarios válidos registrados",
+          total: 0,
+          usuarios: []
+        });
+      }
+
+      return res.status(200).json({
+        mensaje: "Lista de usuarios obtenida correctamente",
+        total: usuarios.length,
+        usuarios
+      });
+
+    } catch (error) {
+      console.error("❌ Error crítico al listar cuentas:", error);
       return res.status(500).json({
-        mensaje:
-          "Los usuarios registrados tienen datos inconsistentes. Revisar integridad de datos."
+        mensaje: "Error interno al listar usuarios",
+        error: error.message
       });
     }
-
-    return res.status(200).json({
-      mensaje: "Lista de usuarios obtenida correctamente",
-      total: usuarios.length,
-      usuarios
-    });
-
-  } catch (error) {
-    console.error("❌ Error crítico al listar cuentas:", error);
-    return res.status(500).json({
-      mensaje: "Error interno al listar usuarios",
-      error: error.message
-    });
   }
-}
+
+  async cambiarEstadoCuenta(req, res) {
+    try {
+      const { external } = req.params;
+      const cuenta = await Cuenta.findOne({ where: { external } });
+
+      if (!cuenta) {
+        return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      }
+
+      // Invertir el estado
+      cuenta.estado = !cuenta.estado;
+      await cuenta.save();
+
+      res.status(200).json({
+        mensaje: "Estado de la cuenta actualizado exitosamente",
+        estado: cuenta.estado ? "Activo" : "Inactivo"
+      });
+    } catch (error) {
+      res.status(500).json({
+        mensaje: "Error al cambiar estado",
+        error: error.message,
+      });
+    }
+  }
+
+
 
 
     

@@ -13,6 +13,8 @@ router.get('/listarCuentasAprobadas', cuentaController.listarCuentasAprobadas);
 router.patch('/desactivar/:external', cuentaController.desactivarCuenta);
 
 router.get('/listarCuentas', cuentaController.listarCuentas);
+
+router.patch('/cambiarEstado/:external', cuentaController.cambiarEstadoCuenta);
  
 
 module.exports = router;

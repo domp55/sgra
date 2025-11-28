@@ -10,6 +10,7 @@ export async function desactivarCuenta(external, token) {
   }
   return datos.data;
 }
+
 export async function aceptarCuenta(external, token) {
   let datos = null;
   try {
@@ -42,6 +43,7 @@ export async function listarCuentasPorAprobar(token) {
   console.log(datos.data);
   return datos.data;
 }
+
 export async function listarCuentasAprobadas(token) {
   let datos = null;
   try {
@@ -53,6 +55,7 @@ export async function listarCuentasAprobadas(token) {
   console.log(datos.data);
   return datos.data;
 }
+
 export async function registroUsuario(data) {
   let datos = null;
   try {
@@ -63,4 +66,14 @@ export async function registroUsuario(data) {
   }
 
   return datos;
+}
+
+export async function cambiarEstadoCuenta(external, token) {
+  let datos = null;
+  try {
+    datos = await PATCH("/api/cuenta/cambiarEstado/" + external, token);
+  } catch (error) {
+    return error;
+  }
+  return datos.data;
 }

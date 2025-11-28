@@ -1,18 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Copy } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
-import { listarCuentas } from "@/hooks/ServiceCuenta";
+import { listarCuentas, cambiarEstadoCuenta } from "@/hooks/ServiceCuenta";
+import Swal from "sweetalert2";
 
 interface DataType {
   correo: string;
   nombre: string;
   rol: string;
   estado: string;
+  external: string;
 }
 
 export default function GestionUsuarios() {
@@ -65,6 +67,40 @@ export default function GestionUsuarios() {
       item.rol.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // --------------------------------------------------
+  // Copiar external al portapapeles
+  // --------------------------------------------------
+  const handleCopy = (external: string) => {
+    navigator.clipboard.writeText(external);
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "External copiado al portapapeles",
+      showConfirmButton: false,
+      timer: 1500,
+    });
+  };
+
+  // --------------------------------------------------
+  // Cambiar estado
+  // --------------------------------------------------
+  const toggleEstado = async (external: string) => {
+    const token = Cookies.get("token") || sessionStorage.getItem("token");
+    if (!token) return router.push("/login");
+
+    try {
+      await cambiarEstadoCuenta(external, token);
+      fetchData(); // refresca la lista
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo cambiar el estado del usuario",
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <Sidebar />
@@ -115,30 +151,32 @@ export default function GestionUsuarios() {
                     <th className="px-4 py-3">Correo</th>
                     <th className="px-4 py-3">Rol</th>
                     <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3">External</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-border bg-card">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="h-32 text-center text-muted-foreground">
+                      <td colSpan={5} className="h-32 text-center text-muted-foreground">
                         Cargando usuarios...
                       </td>
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="h-32 text-center text-muted-foreground">
+                      <td colSpan={5} className="h-32 text-center text-muted-foreground">
                         No existen usuarios registrados
                       </td>
                     </tr>
                   ) : (
                     filteredData.map((item) => (
-                      <tr key={item.correo} className="hover:bg-muted/50 transition-colors">
+                      <tr key={item.external} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium">{item.nombre}</td>
                         <td className="px-4 py-3 text-muted-foreground">{item.correo}</td>
                         <td className="px-4 py-3">{item.rol}</td>
                         <td className="px-4 py-3">
-                          <span
+                          <button
+                            onClick={() => toggleEstado(item.external)}
                             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                               item.estado === "Activo"
                                 ? "bg-emerald-600 text-white border border-emerald-700"
@@ -146,7 +184,17 @@ export default function GestionUsuarios() {
                             }`}
                           >
                             {item.estado}
-                          </span>
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 flex items-center gap-2">
+                          <span>{item.external}</span>
+                          <button
+                            onClick={() => handleCopy(item.external)}
+                            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                            title="Copiar External"
+                          >
+                            <Copy size={16} />
+                          </button>
                         </td>
                       </tr>
                     ))

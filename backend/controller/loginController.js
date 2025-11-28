@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const models = require('../models');
 const usuario = models.persona;
 const Cuenta = models.cuenta;
+const rol = models.rol;
 const bcrypt = require('bcrypt');
 
 const nodemailer = require("nodemailer");
@@ -53,7 +54,7 @@ class LoginController {
             }
 
             if (!login.estado) {
-                return res.status(403).json({ msg: "USUARIO INACTIVO", code: 403 });
+                return res.status(403).json({ msg: "USUARIO INACTIVO, EL ADMIN DEBE ACEPTARLO", code: 403 });
             }
 
             if (!login.contrasena) {
@@ -96,43 +97,60 @@ class LoginController {
     // -------------------------
     // Registrar admin
     // -------------------------
-    async registrarAdmin(req, res) {
-        const db = require('../config/configBd');
-        const t = await db.transaction();
+async registrarAdmin(req, res) {
+    const db = require('../config/configBd');
+    const t = await db.transaction();
 
-        try {
-            const { nombre, apellido, cedula, correo, contrasena } = req.body;
+    try {
+        const { nombre, apellido, cedula, correo, contrasena } = req.body;
 
-            const salt = await bcrypt.genSalt(10);
-            const hashContrasena = await bcrypt.hash(contrasena, salt);
+        // Generar hash de la contraseña
+        const salt = await bcrypt.genSalt(10);
+        const hashContrasena = await bcrypt.hash(contrasena, salt);
 
-            const nuevaPersona = await usuario.create({
-                nombre,
-                apellido,
-                cedula
-            }, { transaction: t });
+        // Crear la persona
+        const nuevaPersona = await usuario.create({
+            nombre,
+            apellido,
+            cedula
+        }, { transaction: t });
 
-            const nuevaCuenta = await Cuenta.create({
-                correo,
-                contrasena: hashContrasena,
-                esAdmin: true,
-                estado: true,
-                personaId: nuevaPersona.id
-            }, { transaction: t });
+        // Buscar el rol de administrador
+        const rolAdmin = await rol.findOne({
+            where: { nombre: "ADMIN" } // asumimos que el rol "ADMIN" ya existe
+        });
 
-            await t.commit();
-
-            res.status(201).json({
-                mensaje: "Admin Registrado Correctamente.",
-                cuenta_id: nuevaCuenta.external
-            });
-
-        } catch (error) {
+        if (!rolAdmin) {
             await t.rollback();
-            console.error("Error al registrar admin:", error);
-            res.status(500).json({ mensaje: "Error al registrar", error: error.message });
+            return res.status(500).json({
+                mensaje: "No se encontró el rol de administrador. Debe crearse previamente."
+            });
         }
+
+        // Crear la cuenta asociando el rol de admin
+        const nuevaCuenta = await Cuenta.create({
+            correo,
+            contrasena: hashContrasena,
+            esAdmin: true,
+            estado: true,
+            personaId: nuevaPersona.id,
+            rolID: rolAdmin.id
+        }, { transaction: t });
+
+        await t.commit();
+
+        res.status(201).json({
+            mensaje: "Admin registrado correctamente.",
+            cuenta_id: nuevaCuenta.external
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error("Error al registrar admin:", error);
+        res.status(500).json({ mensaje: "Error al registrar", error: error.message });
     }
+}
+
 
     async restablecerContraseña(req, res) {
         const { correo } = req.body;
