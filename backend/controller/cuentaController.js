@@ -5,6 +5,7 @@ const db = require("../models");
 const Cuenta = db.cuenta;
 const Persona = db.persona;
 const Colaborador = db.colaborador;
+const Rol = db.rol;
 
 const bcrypt = require("bcrypt");
 
@@ -16,39 +17,53 @@ class CuentaController {
     try {
       const { nombre, apellido, cedula, correo, contrasena } = req.body;
 
+      // Validar correo
       const correoExiste = await Cuenta.findOne({ where: { correo } });
       if (correoExiste) {
         return res.status(400).json({
-          mensaje: "El correo ya está registrado.",
+          mensaje: "El correo ya está registrado."
         });
       }
 
+      // Validar cédula
       const cedulaExiste = await Persona.findOne({ where: { cedula } });
       if (cedulaExiste) {
         return res.status(400).json({
-          mensaje: "La cedula ya está registrada en el sistema.",
+          mensaje: "La cedula ya está registrada en el sistema."
         });
       }
 
+      // Verificar que el rol por defecto (ID = 1) exista
+      const rolPorDefecto = await Rol.findByPk(1);
+      if (!rolPorDefecto) {
+        return res.status(500).json({
+          mensaje: "Error: No existe el rol por defecto (ID = 1)."
+        });
+      }
+
+      // Encriptar contraseña
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(contrasena, salt);
 
+      // Crear Persona
       const nuevaPersona = await Persona.create(
         {
           nombre,
           apellido,
-          cedula,
+          cedula
         },
         { transaction: t }
       );
 
+      // Crear Cuenta asociada con rol por defecto
       const nuevaCuenta = await Cuenta.create(
         {
           correo,
           contrasena: hash,
           estado: false,
           personaId: nuevaPersona.id,
-          esAdmin: false,
+          rolID: 1,    // ← ASIGNACIÓN DEL ROL POR DEFECTO
+          esAdmin: false
         },
         { transaction: t }
       );
@@ -57,17 +72,19 @@ class CuentaController {
 
       res.status(201).json({
         mensaje: "Registro exitoso. Espere aprobación del administrador.",
-        cuenta_id: nuevaCuenta.external,
+        cuenta_id: nuevaCuenta.external
       });
+
     } catch (error) {
       await t.rollback();
       console.log(error);
       res.status(500).json({
         mensaje: "Error al registrar",
-        error: error.message,
+        error: error.message
       });
     }
   }
+
 
   // HU6: Aprobación de solicitudes
   async aprobarCuenta(req, res) {
@@ -91,9 +108,6 @@ class CuentaController {
       });
     }
   }
-
-
-
 
   // HU7: Listar cuentas
   async listarCuentasAprobadas(req, res) {
@@ -120,28 +134,81 @@ console.log(cuentas);
       error: error.message,
     });
   }
+  }
+
+async listarCuentas(req, res) {
+  try {
+    const cuentas = await Cuenta.findAll({
+      attributes: ["correo", "estado", "id", "createdAt"],
+      include: [
+        {
+          model: Persona,
+          as: "persona",
+          attributes: ["nombre", "apellido", "cedula"]
+        },
+        {
+          model: Rol,
+          as: "rol",
+          attributes: ["nombre"] // tu modelo usa "nombre"
+        }
+      ]
+    });
+
+    // 🌐 Validación: ¿hay cuentas?
+    if (!cuentas || cuentas.length === 0) {
+      return res.status(404).json({
+        mensaje: "No existen usuarios registrados",
+        usuarios: []
+      });
+    }
+
+    // 🔍 Transformación y validaciones avanzadas
+    const usuarios = cuentas
+      .map((c) => {
+        if (!c.persona) {
+          console.warn(`⚠ Cuenta ID ${c.id} sin persona asociada.`);
+          return null;
+        }
+
+        return {
+          nombre: `${c.persona.nombre} ${c.persona.apellido}`,
+          cedula: c.persona.cedula,
+          correo: c.correo,
+          rol: c.rol ? c.rol.nombre : "Sin rol asignado",   // CORREGIDO
+          estado: c.estado ? "Activo" : "Inactivo",
+          registrado_en: c.createdAt
+            ? c.createdAt.toISOString().split("T")[0]
+            : "Fecha no disponible"
+        };
+      })
+      .filter((u) => u !== null); // elimino registros corruptos
+
+    // ⚠ Si todas las cuentas fallaron
+    if (usuarios.length === 0) {
+      return res.status(500).json({
+        mensaje:
+          "Los usuarios registrados tienen datos inconsistentes. Revisar integridad de datos."
+      });
+    }
+
+    return res.status(200).json({
+      mensaje: "Lista de usuarios obtenida correctamente",
+      total: usuarios.length,
+      usuarios
+    });
+
+  } catch (error) {
+    console.error("❌ Error crítico al listar cuentas:", error);
+    return res.status(500).json({
+      mensaje: "Error interno al listar usuarios",
+      error: error.message
+    });
+  }
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  //cuentas para aprobarlas  HU7: Listar cuentas
+    
+//cuentas para aprobarlas  HU7: Listar cuentas
   async listarCuentasPorAprobar(req, res) {
     try {
       const cuentas = await Cuenta.findAll({

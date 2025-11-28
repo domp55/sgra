@@ -1,30 +1,34 @@
 'use strict';
 const { validationResult } = require('express-validator');
-var models = require('../models');
-var usuario = models.persona;
-const db = require('../config/configBd');
+const models = require('../models');
+const usuario = models.persona;
+const Cuenta = models.cuenta;
 const bcrypt = require('bcrypt');
-var Cuenta = models.cuenta;
-let jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+require('dotenv').config(); // cargar variables de entorno
 
-class loginController {
+class LoginController {
 
+    // -------------------------
+    // Iniciar sesión
+    // -------------------------
     async sesion(req, res) {
-        let errors = validationResult(req);
-        console.log(req.body)
-        // Validar errores
+
+        console.log('REQ BODY:', req.body);
+        const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
-                msg: "Datos faltantes",
+                msg: "Datos faltantes o inválidos",
                 code: 400,
                 errors: errors.array()
             });
         }
 
+        const { correo, contrasena } = req.body;
+
         try {
-            // Buscar cuenta por correo
             const login = await Cuenta.findOne({
-                where: { correo: req.body.correo },
+                where: { correo },
                 include: [
                     {
                         model: usuario,
@@ -34,49 +38,45 @@ class loginController {
                 ]
             });
 
-            // Si no existe
-            if (!login || login == null) {
-                return res.status(400).json({
-                    msg: "USUARIO NO ENCONTRADO",
-                    code: 400
-                });
+            console.log('LOGIN DB:', login);
+
+
+            if (!login) {
+                return res.status(400).json({ msg: "USUARIO NO ENCONTRADO", code: 400 });
             }
 
-            // Validar estado activo
+            if (!login.persona) {
+                return res.status(400).json({ msg: "USUARIO SIN PERFIL ASOCIADO", code: 400 });
+            }
+
             if (!login.estado) {
-                return res.json({
-                    msg: "USUARIO NO SE ENCUENTRA ACTIVO",
-                    code: 201
-                });
+                return res.status(403).json({ msg: "USUARIO INACTIVO", code: 403 });
             }
 
-            // Validar contraseña
-            const passwordValida = bcrypt.compareSync(req.body.contrasena, login.contrasena);
+            if (!login.contrasena) {
+                return res.status(400).json({ msg: "CUENTA SIN CONTRASEÑA REGISTRADA", code: 400 });
+            }
 
+            const passwordValida = bcrypt.compareSync(contrasena, login.contrasena);
             if (!passwordValida) {
-                return res.json({
-                    msg: "CLAVE INCORRECTA",
-                    code: 201
-                });
+                return res.status(401).json({ msg: "CLAVE INCORRECTA", code: 401 });
             }
 
-            // Crear token
+            const llave = process.env.KEY_SQ;
+            if (!llave) {
+                return res.status(500).json({ msg: "CLAVE JWT NO CONFIGURADA", code: 500 });
+            }
+
             const tokenData = {
                 external: login.external,
                 user: login.persona.nombre,
                 check: true
             };
 
-            require('dotenv').config();
-            const llave = process.env.KEY_SQ;
+            const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
 
-            const token = jwt.sign(tokenData, llave, {
-                expiresIn: '2h'
-            });
-
-            // Respuesta final correcta
-            return res.json({
-                token: token,
+            return res.status(200).json({
+                token,
                 user: `${login.persona.nombre} ${login.persona.apellido}`,
                 msg: `Bienvenid@ ${login.persona.nombre} ${login.persona.apellido}`,
                 correo: login.correo,
@@ -86,19 +86,18 @@ class loginController {
 
         } catch (error) {
             console.error("Error en login:", error);
-            return res.status(500).json({
-                msg: "ERROR EN SERVIDOR",
-                code: 500,
-                error: error.message
-            });
+            return res.status(500).json({ msg: "ERROR INTERNO DEL SERVIDOR", code: 500, error: error.message });
         }
     }
 
+    // -------------------------
+    // Registrar admin
+    // -------------------------
     async registrarAdmin(req, res) {
+        const db = require('../config/configBd');
         const t = await db.transaction();
 
         try {
-
             const { nombre, apellido, cedula, correo, contrasena } = req.body;
 
             const salt = await bcrypt.genSalt(10);
@@ -107,15 +106,15 @@ class loginController {
             const nuevaPersona = await usuario.create({
                 nombre,
                 apellido,
-                cedula,
-            }, { transaction: t }); 
+                cedula
+            }, { transaction: t });
 
             const nuevaCuenta = await Cuenta.create({
                 correo,
                 contrasena: hashContrasena,
                 esAdmin: true,
                 estado: true,
-                personaId: nuevaPersona.id,
+                personaId: nuevaPersona.id
             }, { transaction: t });
 
             await t.commit();
@@ -127,10 +126,11 @@ class loginController {
 
         } catch (error) {
             await t.rollback();
-            console.log(error);
+            console.error("Error al registrar admin:", error);
             res.status(500).json({ mensaje: "Error al registrar", error: error.message });
         }
     }
-    
+
 }
-module.exports = loginController;
+
+module.exports = new LoginController(); // exportamos la instancia directamente

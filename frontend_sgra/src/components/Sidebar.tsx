@@ -7,6 +7,7 @@ import { Home, Users, LogOut } from "lucide-react";
 const menuItems = [
   { name: "Solicitudes de aprobación", href: "/admin/aprobar", icon: Home },
   { name: "Usuarios Activos", href: "/admin/lista", icon: Users },
+  { name: "Todos los Usuarios", href: "/admin/todos", icon: Users },
 ];
 
 export default function Sidebar() {

@@ -12,9 +12,20 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     cuenta.associate = function (models) {
+        // Relación con persona
         cuenta.belongsTo(models.persona, { foreignKey: 'personaId' });
-        cuenta.hasMany(models.colaborador, {foreignKey: "cuentaID",as: "colaborador"
-    });
+
+        // Relación con colaborador
+        cuenta.hasMany(models.colaborador, {
+            foreignKey: "cuentaID",
+            as: "colaborador"
+        });
+
+        // ⭐ Nueva relación con rol (cada cuenta tiene un rol)
+        cuenta.belongsTo(models.rol, {
+            foreignKey: "rolID",
+            as: "rol"
+        });
     };
 
     return cuenta;

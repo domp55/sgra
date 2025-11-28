@@ -14,6 +14,8 @@ class colaboradorController {
             res.status(500).json({ mensaje: "Error al listar colaboradores", error: error.message });
         }
     };
+
+    
 }
 // hshshshs
 module.exports = new colaboradorController();
