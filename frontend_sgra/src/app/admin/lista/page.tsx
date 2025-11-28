@@ -33,7 +33,7 @@ export default function GestionUsuarios() {
   // Cargar datos
   // --------------------------------------------------
   const fetchData = async () => {
-    const token = Cookies.get("token");
+    const token = sessionStorage.getItem("token");
     if (!token) return router.push("/login");
 
     try {
@@ -41,8 +41,8 @@ export default function GestionUsuarios() {
       const resultado = await listarCuentasAprobadas(token);
 
       if (resultado?.response?.status === 401) {
-        Cookies.remove("token");
-        router.push("/login");
+        sessionStorage.remove("token");
+        router.push("/");
         return;
       }
 
@@ -231,10 +231,12 @@ export default function GestionUsuarios() {
 
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                               item.estado
-                                ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400"
+                                ? 
+                                  "bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-600 dark:text-white"
+                                : 
+                                  "bg-red-600 text-white border border-red-700 dark:bg-red-600 dark:text-white"
                             }`}
                           >
                             {item.estado ? "Activo" : "Inactivo"}

@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Users, LogOut } from "lucide-react";
+import { Home, LogOut } from "lucide-react";
 
 const menuItems = [
-  { name: "Solicitudes de aprobación", href: "/admin/aprobar", icon: Home },
-  { name: "Usuarios Activos", href: "/admin/lista", icon: Users },
+  { name: "Proyectos", href: "/admin/aprobar", icon: Home },
 ];
 
 export default function Sidebar() {
@@ -20,7 +19,7 @@ export default function Sidebar() {
     router.push("/");
   };
 
-  // Obtener el nombre del usuario desde sessionStorage
+  // Obtener info del usuario desde sessionStorage
   const userName = sessionStorage.getItem("user") || "Usuario";
   
   // Generar iniciales

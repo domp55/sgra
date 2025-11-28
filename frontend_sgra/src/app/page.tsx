@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       if (info.code === 200) {
         mensajes(info.msg, "Has Ingresado al Sistema", "success");
-        router.push("/plantilla");
+        router.push("/admin/lista");
         return;
       }else{
         mensajes(info.msg, "Error", "error");

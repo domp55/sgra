@@ -29,7 +29,7 @@ export default function CuentasPorAprobar() {
   // Cargar datos
   // --------------------------------------------------
   const fetchData = async () => {
-    const token = Cookies.get("token");
+    const token = sessionStorage.getItem("token");
     if (!token) return router.push("/login");
 
     try {
@@ -37,8 +37,8 @@ export default function CuentasPorAprobar() {
       const resultado = await listarCuentasPorAprobar(token);
 
       if (resultado?.response?.status === 401) {
-        Cookies.remove("token");
-        router.push("/login");
+        sessionStorage.remove("token");
+        router.push("/");
         return;
       }
 
