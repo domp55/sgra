@@ -305,11 +305,14 @@ console.log(cuentas);
 
     const cuenta = await Cuenta.findOne({ where: { external } });
 
+
     if (!cuenta) {
       return res.status(404).json({ mensaje: "Cuenta no encontrada" });
     }
+    const persona = await Persona.findOne({where: cuenta.personaId })
 
     await cuenta.destroy();
+        await persona.destroy();
 
     res.status(200).json({ mensaje: "Cuenta eliminada exitosamente" });
   } catch (error) {
