@@ -4,6 +4,7 @@ const cuentaController = require('../controller/cuentaController');
 router.post('/registro', cuentaController.registrar);
 
 router.patch('/aprobar/:external', cuentaController.aprobarCuenta);
+router.patch('/eliminar/:external', cuentaController.rechazarPeticion);
 
 //router.get('/listarCuentas', cuentaController.listarCuentas);
 router.get('/listarCuentasPorAprobar', cuentaController.listarCuentasPorAprobar);

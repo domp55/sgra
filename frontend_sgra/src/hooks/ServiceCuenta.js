@@ -77,3 +77,13 @@ export async function cambiarEstadoCuenta(external, token) {
   }
   return datos.data;
 }
+
+export async function eliminarCuenta(external, token) {
+  let datos = null;
+  try {
+    datos = await PATCH("/api/cuenta/eliminar/" + external, token);
+  } catch (error) {
+    return error;
+  }
+  return datos.data;
+}

@@ -34,7 +34,7 @@ class CuentaController {
       }
 
       // Verificar que el rol "DESARROLLADOR" exista
-      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLADOR" } });
+      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLLADOR" } });
       if (!rolPorDefecto) {
         return res.status(500).json({
           mensaje: "Error: No existe el rol por defecto 'DESARROLLADOR'."
@@ -113,7 +113,7 @@ class CuentaController {
         {
           model: Persona,
           as: "persona",
-          attributes: ["nombre", "apellido"],
+          attributes: ["nombre", "apellido", "cedula"],
         },
       ],
     });
@@ -139,7 +139,7 @@ console.log(cuentas);
           {
             model: Persona,
             as: "persona",
-            attributes: ["nombre", "apellido", "cedula"]
+          attributes: ["nombre", "apellido", "cedula"],
           },
           {
             model: Rol,
@@ -230,7 +230,7 @@ console.log(cuentas);
           {
             model: Persona,
             as: "persona",
-            attributes: ["nombre", "apellido"],
+          attributes: ["nombre", "apellido", "cedula"],
           },
           {
             model: Colaborador,
@@ -258,6 +258,7 @@ console.log(cuentas);
             ? {
                 nombre: persona.nombre,
                 apellido: persona.apellido,
+                cedula : persona.cedula,
               }
             : null,
 
@@ -298,6 +299,26 @@ console.log(cuentas);
       });
     }
   }
+  async rechazarPeticion(req, res) {
+  try {
+    const { external } = req.params;
+
+    const cuenta = await Cuenta.findOne({ where: { external } });
+
+    if (!cuenta) {
+      return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+    }
+
+    await cuenta.destroy();
+
+    res.status(200).json({ mensaje: "Cuenta eliminada exitosamente" });
+  } catch (error) {
+    res.status(500).json({
+      mensaje: "Error al eliminar",
+      error: error.message,
+    });
+  }
+}
 }
 
 module.exports = new CuentaController();
