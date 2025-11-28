@@ -6,6 +6,9 @@ const Cuenta = models.cuenta;
 const Persona = models.persona;
 const Rol = models.rol;
 const bcrypt = require('bcrypt');
+
+const nodemailer = require("nodemailer");
+
 const jwt = require('jsonwebtoken');
 require('dotenv').config(); // cargar variables de entorno
 
@@ -158,6 +161,41 @@ async registrarAdmin(req, res) {
 }
 
 
+    async restablecerContraseña(req, res) {
+        const { correo } = req.body;
+        if (!correo) return res.status(400).json({ msg: "Debe proporcionar un correo", code: 400 });
+
+        try {
+            // Buscar la cuenta
+            const cuenta = await Cuenta.findOne({
+                where: { correo },
+                include: [{ model: usuario, as: 'persona', attributes: ['cedula'] }]
+            });
+
+            if (!cuenta) return res.status(404).json({ msg: "Cuenta no encontrada", code: 404 });
+
+            // Generar hash de la cédula
+            const salt = await bcrypt.genSalt(10);
+            const hashCedula = await bcrypt.hash(cuenta.persona.cedula, salt);
+
+            // Actualizar la contraseña usando el mismo patrón que en tu modificar()
+            const result = await cuenta.update({ contrasena: hashCedula });
+
+            if (!result) {
+                return res.status(500).json({ msg: "No se pudo actualizar la contraseña", code: 500 });
+            }
+
+            return res.status(200).json({
+                msg: "Contraseña restablecida temporalmente a la cédula",
+                code: 200
+            });
+
+        } catch (error) {
+            console.error("Error al restablecer contraseña:", error);
+            return res.status(500).json({ msg: "Error en servidor", code: 500, error: error.message });
+        }
+    }
+
 }
 
-module.exports = new LoginController(); // exportamos la instancia directamente
+module.exports = new LoginController();

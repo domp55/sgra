@@ -28,7 +28,7 @@ export default function GestionUsuarios() {
   // --------------------------------------------------
   const fetchData = async () => {
     const token = Cookies.get("token") || sessionStorage.getItem("token");
-    if (!token) return router.push("/login");
+    if (!token) return router.push("/");
 
     try {
       setLoading(true);
@@ -36,7 +36,7 @@ export default function GestionUsuarios() {
 
       if (resultado?.response?.status === 401) {
         sessionStorage.removeItem("token");
-        router.push("/login");
+        router.push("/");
         return;
       }
 
@@ -87,7 +87,7 @@ export default function GestionUsuarios() {
   // --------------------------------------------------
   const toggleEstado = async (external: string) => {
     const token = Cookies.get("token") || sessionStorage.getItem("token");
-    if (!token) return router.push("/login");
+    if (!token) return router.push("/");
 
     try {
       await cambiarEstadoCuenta(external, token);

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Pencil, Ban, KeyRound, Search } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
-import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
@@ -12,11 +11,13 @@ import {
   listarCuentasAprobadas,
   desactivarCuenta,
 } from "@/hooks/ServiceCuenta";
+import { resetearContrasena } from "@/hooks/Autenticacion";
 
 interface DataType {
   external_id: string;
   nombre: string;
   apellido: string;
+  cedula: string;
   correo: string;
   estado: boolean;
   fecha: string;
@@ -34,7 +35,7 @@ export default function GestionUsuarios() {
   // --------------------------------------------------
   const fetchData = async () => {
     const token = sessionStorage.getItem("token");
-    if (!token) return router.push("/login");
+    if (!token) return router.push("/");
 
     try {
       setLoading(true);
@@ -52,6 +53,7 @@ export default function GestionUsuarios() {
           nombre: item.persona?.nombre || "Sin nombre",
           apellido: item.persona?.apellido || "Sin apellido",
           correo: item.correo,
+          cedula: item.persona?.cedula || "Sin cédula",
           estado: item.estado,
           fecha: new Date(item.createdAt).toLocaleDateString(),
         }));
@@ -89,8 +91,8 @@ export default function GestionUsuarios() {
 
     if (!confirmacion.isConfirmed) return;
 
-    const token = Cookies.get("token");
-    if (!token) return router.push("/login");
+    const token = sessionStorage.getItem("token");
+    if (!token) return router.push("/");
 
     try {
       await desactivarCuenta(external, token);
@@ -116,12 +118,46 @@ export default function GestionUsuarios() {
   // --------------------------------------------------
   // Resetear contraseña (te dejo la estructura)
   // --------------------------------------------------
-  const handleResetPassword = async (external: string) => {
-    Swal.fire({
-      title: "Función no implementada",
-      text: "Aquí puedes llamar a tu endpoint para resetear la clave.",
-      icon: "info",
+  const handleResetPassword = async (correo: string) => {
+    const confirmacion = await Swal.fire({
+      title: `¿Restablecer contraseña?`,
+      text: "Se enviará un correo con la contraseña temporal.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, enviar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
     });
+
+    if (!confirmacion.isConfirmed) return;
+    try {
+      const resultado = await resetearContrasena(correo, "");
+
+      if (resultado.code === 200) {
+        Swal.fire({
+          title: "Contraseña restablecida",
+          text: resultado.msg,
+          icon: "success",
+          confirmButtonText: "Aceptar",
+        });
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: resultado.msg || "No se pudo restablecer la contraseña",
+          icon: "error",
+          confirmButtonText: "Aceptar",
+        });
+      }
+    } catch (err) {
+      console.error("Error al resetear contraseña:", err);
+      Swal.fire({
+        title: "Error",
+        text: "No se pudo conectar con el servidor",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+      });
+    }
   };
 
   useEffect(() => {
@@ -190,6 +226,8 @@ export default function GestionUsuarios() {
                   <tr>
                     <th className="px-4 py-3">Nombre</th>
                     <th className="px-4 py-3">Correo</th>
+                    <th className="px-4 py-3">Cédula</th>
+
                     <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3">Fecha</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
@@ -228,15 +266,16 @@ export default function GestionUsuarios() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {item.correo}
                         </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {item.cedula}
+                        </td>
 
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                               item.estado
-                                ? 
-                                  "bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-600 dark:text-white"
-                                : 
-                                  "bg-red-600 text-white border border-red-700 dark:bg-red-600 dark:text-white"
+                                ? "bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-600 dark:text-white"
+                                : "bg-red-600 text-white border border-red-700 dark:bg-red-600 dark:text-white"
                             }`}
                           >
                             {item.estado ? "Activo" : "Inactivo"}
@@ -251,9 +290,7 @@ export default function GestionUsuarios() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() =>
-                                handleResetPassword(item.external_id)
-                              }
+                              onClick={() => handleResetPassword(item.correo)}
                               className="flex items-center gap-2 p-1.5 rounded-md hover:bg-amber-100 text-amber-600 dark:hover:bg-amber-900/30 dark:text-amber-400"
                             >
                               <KeyRound size={17} />
