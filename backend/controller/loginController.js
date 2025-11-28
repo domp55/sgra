@@ -133,58 +133,42 @@ class LoginController {
             res.status(500).json({ mensaje: "Error al registrar", error: error.message });
         }
     }
-    
+
     async restablecerContraseña(req, res) {
         const { correo } = req.body;
+        if (!correo) return res.status(400).json({ msg: "Debe proporcionar un correo", code: 400 });
 
         try {
+            // Buscar la cuenta
             const cuenta = await Cuenta.findOne({
                 where: { correo },
-                include: [{ model: usuario, as: 'persona', attributes: ['nombre', 'apellido', 'cedula'] }]
+                include: [{ model: usuario, as: 'persona', attributes: ['cedula'] }]
             });
 
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS
-                }
-            });
+            if (!cuenta) return res.status(404).json({ msg: "Cuenta no encontrada", code: 404 });
 
-            // Mensaje a enviar
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: cuenta.correo,
-                subject: 'Restablecimiento de contraseña',
-                text: `Hola ${cuenta.persona.nombre}, tu contraseña temporal será tu número de cédula (${cuenta.persona.cedula}). 
-Por favor, actualiza tu contraseña al iniciar sesión nuevamente.`
-            };
-
-            // Enviar correo
-            await transporter.sendMail(mailOptions);
-
-            // Actualizar contraseña en la base de datos
+            // Generar hash de la cédula
             const salt = await bcrypt.genSalt(10);
             const hashCedula = await bcrypt.hash(cuenta.persona.cedula, salt);
 
-            cuenta.contrasena = hashCedula;
-            await cuenta.save();
+            // Actualizar la contraseña usando el mismo patrón que en tu modificar()
+            const result = await cuenta.update({ contrasena: hashCedula });
 
-            return res.json({
-                msg: "Correo enviado y contraseña restablecida temporalmente",
+            if (!result) {
+                return res.status(500).json({ msg: "No se pudo actualizar la contraseña", code: 500 });
+            }
+
+            return res.status(200).json({
+                msg: "Contraseña restablecida temporalmente a la cédula",
                 code: 200
             });
 
         } catch (error) {
             console.error("Error al restablecer contraseña:", error);
-            return res.status(500).json({
-                msg: "Error en servidor",
-                code: 500,
-                error: error.message
-            });
+            return res.status(500).json({ msg: "Error en servidor", code: 500, error: error.message });
         }
     }
 
 }
 
-module.exports = new LoginController(); // exportamos la instancia directamente
+module.exports = new LoginController();

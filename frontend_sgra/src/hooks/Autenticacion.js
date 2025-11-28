@@ -23,7 +23,11 @@ export async function inicio_sesion(data) {
 
 export const resetearContrasena = async (correo, token = "") => {
     try {
-        const respuesta = await PUT("/api/privado/admin/restablecer",  correo, token);
+        const respuesta = await PUT(
+            "/api/privado/admin/restablecer",
+            { correo }, // <-- aquí lo metemos en un objeto
+            token
+        );
         return respuesta;
     } catch (error) {
         console.error("Error en resetearContrasena:", error);

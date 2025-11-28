@@ -1,5 +1,6 @@
-const db = require("../models"); 
-const rol = db.rol;
+const db = require("../models");
+//const rol = db.rol;
+const rol = require('../controller/rolController');
 
 
 class RolController {
@@ -17,7 +18,7 @@ class RolController {
 
     registrarRol = async (req, res) => {
         try {
-            const { nombreRol } = req.body;                
+            const { nombreRol } = req.body;
             const nuevoRol = await rol.create({ nombreRol });
             res.status(201).json({ mensaje: "Rol registrado exitosamente", rol: nuevoRol });
         } catch (error) {
@@ -25,6 +26,6 @@ class RolController {
         }
     };
 
-    
+
 }
 module.exports = new RolController();
