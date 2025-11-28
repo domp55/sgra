@@ -29,4 +29,9 @@ router.post(
     loginController.registrarAdmin
 );
 
+// Registrar admin
+router.put('/admin/restablecer', loginController.restablecerContraseña);
+
+
+
 module.exports = router;

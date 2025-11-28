@@ -9,7 +9,11 @@ const loginRouter = require('./routes/loginRoutes');
 const rolRouter = require('./routes/rolRoutes');
 
 app.use(express.json());
-app.use(cors());
+// Middleware para preflight CORS
+app.use(cors({
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-Access-Token"]
+}));
 
 app.use(express.json());
 app.use('/api/cuenta',cuentaRouter);

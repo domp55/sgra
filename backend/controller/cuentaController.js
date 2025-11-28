@@ -66,7 +66,7 @@ class CuentaController {
 
       await t.commit();
 
-      res.status(201).json({
+      res.status(200).json({
         mensaje: "Registro exitoso. Espere aprobación del administrador.",
         cuenta_id: nuevaCuenta.external
       });
