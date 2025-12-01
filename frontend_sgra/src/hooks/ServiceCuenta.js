@@ -46,6 +46,7 @@ export async function listarCuentasPorAprobar(token) {
 
 export async function listarCuentasAprobadas(token) {
   let datos = null;
+  console.log("hookks   " +token);
   try {
     datos = await GET("/api/cuenta/listarCuentasAprobadas", token);
     console.log(datos);

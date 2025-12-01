@@ -10,6 +10,8 @@ const bcrypt = require('bcrypt');
 const nodemailer = require("nodemailer");
 
 const jwt = require('jsonwebtoken');
+const { where } = require('sequelize');
+const cuentaController = require('./cuentaController');
 require('dotenv').config(); // cargar variables de entorno
 
 class LoginController {
@@ -76,11 +78,14 @@ async sesion(req, res) {
             return res.status(500).json({ msg: "CLAVE JWT NO CONFIGURADA", code: 500 });
         }
 
+        let persona = await Persona.findOne({where:{external: login.persona.external}});
+        let cuentaAsociada= await Cuenta.findOne({where:{personaId: persona.id}});
         const tokenData = {
             external: login.persona.external,
             user: login.persona.nombre,
             check: true,
-            role: login.rol ? login.rol.nombre : null
+            role: login.rol ? login.rol.nombre : null,
+            externalCuenta : cuentaAsociada.external 
         };
 
         const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });

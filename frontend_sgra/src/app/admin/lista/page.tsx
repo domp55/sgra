@@ -39,10 +39,11 @@ export default function GestionUsuarios() {
 
     try {
       setLoading(true);
-      const resultado = await listarCuentasAprobadas(token);
 
+      const resultado = await listarCuentasAprobadas(token);
+      console.log(resultado);
       if (resultado?.response?.status === 401) {
-        sessionStorage.remove("token");
+        sessionStorage.removeItem("token");
         router.push("/");
         return;
       }

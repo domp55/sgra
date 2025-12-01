@@ -4,15 +4,18 @@ const db = require("../models");
 const Cuenta = db.cuenta;
 const Rol = db.rol;
 const authAdmin = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+  try {    console.log("estooooooooooooo empiezaaaaaa     ")
+
+    console.log("estooooooooooooo      ")
+    console.log(req)
+    const authHeader = req.headers['x-access-token'];
     console.log("Authorization header:", authHeader);
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader) {
       return res.status(401).json({ mensaje: "No autorizado: falta token" });
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader
     console.log("Token recibido:", token);
 
     let decoded;
@@ -25,12 +28,12 @@ const authAdmin = async (req, res, next) => {
     }
 
     const cuenta = await Cuenta.findOne({
-      where: { external: decoded.external },
+      where: { external: decoded.externalCuenta },
       include: [{ model: Rol, as: "rol" }],
     });
 
     if (!cuenta) {
-      console.log("Cuenta no encontrada para external:", decoded.external);
+      console.log("Cuenta no encontrada para external:", decoded.externalCuenta);
       return res.status(401).json({ mensaje: "Usuario no encontrado" });
     }
 
