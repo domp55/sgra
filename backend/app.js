@@ -21,7 +21,7 @@ app.use('/api/colaborador',require('./routes/colaboradorRoutes'));
 app.use('/api/privado', loginRouter);
 app.use('/api/rol', rolRouter);
 
-db.sequelize.sync({ alter: false })
+db.sequelize.sync({ alter: true })
   .then(() => {
     console.log('Base de datos sincronizada');
   })
