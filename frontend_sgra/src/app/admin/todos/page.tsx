@@ -12,7 +12,7 @@ import Swal from "sweetalert2";
 interface DataType {
   correo: string;
   nombre: string;
-  rol: string;
+  isAdmn: string;
   estado: string;
   external: string;
 }
@@ -64,7 +64,7 @@ export default function GestionUsuarios() {
     (item) =>
       item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.correo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.rol.toLowerCase().includes(searchTerm.toLowerCase())
+      item.isAdmn.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // --------------------------------------------------
@@ -113,7 +113,7 @@ export default function GestionUsuarios() {
                 Gestión de Usuarios
               </h1>
               <p className="text-muted-foreground">
-                Visualiza la lista de usuarios y sus roles.
+                Visualiza la lista de usuarios y su rol general del sistema.
               </p>
             </div>
             <ThemeToggle />
@@ -173,7 +173,7 @@ export default function GestionUsuarios() {
                       <tr key={item.external} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium">{item.nombre}</td>
                         <td className="px-4 py-3 text-muted-foreground">{item.correo}</td>
-                        <td className="px-4 py-3">{item.rol}</td>
+                        <td className="px-4 py-3">{item.isAdmn}</td>
                         <td className="px-4 py-3">
                           <button
                             onClick={() => toggleEstado(item.external)}

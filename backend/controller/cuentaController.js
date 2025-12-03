@@ -5,7 +5,6 @@ const db = require("../models");
 const Cuenta = db.cuenta;
 const Persona = db.persona;
 const Colaborador = db.colaborador;
-const Rol = db.rol;
 
 const bcrypt = require("bcrypt");
 
@@ -21,7 +20,7 @@ class CuentaController {
       const correoExiste = await Cuenta.findOne({ where: { correo } });
       if (correoExiste) {
         return res.status(400).json({
-          mensaje: "El correo ya está registrado."
+          mensaje: "El correo ya está registrado.",
         });
       }
 
@@ -29,15 +28,7 @@ class CuentaController {
       const cedulaExiste = await Persona.findOne({ where: { cedula } });
       if (cedulaExiste) {
         return res.status(400).json({
-          mensaje: "La cédula ya está registrada en el sistema."
-        });
-      }
-
-      // Verificar que el rol "DESARROLLADOR" exista
-      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLADOR" } });
-      if (!rolPorDefecto) {
-        return res.status(500).json({
-          mensaje: "Error: No existe el rol por defecto 'DESARROLLADOR'."
+          mensaje: "La cédula ya está registrada en el sistema.",
         });
       }
 
@@ -47,7 +38,7 @@ class CuentaController {
 
       // Crear Persona
       const nuevaPersona = await Persona.create(
-        { nombre, apellido, cedula },
+        { nombre, apellido, cedula, estado: false },
         { transaction: t }
       );
 
@@ -58,8 +49,7 @@ class CuentaController {
           contrasena: hash,
           estado: false,
           personaId: nuevaPersona.id,
-          rolID: rolPorDefecto.id,  // Asignar el ID del rol DESARROLLADOR
-          esAdmin: false
+          esAdmn: false,
         },
         { transaction: t }
       );
@@ -68,15 +58,14 @@ class CuentaController {
 
       res.status(200).json({
         mensaje: "Registro exitoso. Espere aprobación del administrador.",
-        cuenta_id: nuevaCuenta.external
+        cuenta_id: nuevaCuenta.external,
       });
-
     } catch (error) {
       await t.rollback();
       console.error("Error al registrar usuario:", error);
       res.status(500).json({
         mensaje: "Error al registrar",
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -87,12 +76,18 @@ class CuentaController {
       const { external } = req.params;
 
       const cuenta = await Cuenta.findOne({ where: { external } });
-
+      const persona = await Persona.findOne({
+        where: { id: cuenta.personaId },
+      });
       if (!cuenta) {
         return res.status(404).json({ mensaje: "Cuenta no encontrada" });
       }
-
+      if (!persona) {
+        return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      }
+      persona.estado = true;
       cuenta.estado = true;
+      await persona.save();
       await cuenta.save();
 
       res.status(200).json({ mensaje: "Cuenta aprobada exitosamente" });
@@ -106,88 +101,85 @@ class CuentaController {
 
   // HU7: Listar cuentas
   async listarCuentasAprobadas(req, res) {
-  try {
-    const cuentas = await Cuenta.findAll({
-      where: { estado: true },
-      include: [
-        {
-          model: Persona,
-          as: "persona",
-          attributes: ["nombre", "apellido", "cedula"],
-        },
-      ],
-    });
-console.log(cuentas);
-    if (!cuentas || cuentas.length === 0) {
-      return res.status(404).json({ mensaje: "No hay cuentas registradas" });
-    }
+    try {
+      const cuentas = await Cuenta.findAll({
+        where: { estado: true },
+        include: [
+          {
+            model: Persona,
+            as: "persona",
+            attributes: ["nombre", "apellido", "cedula"],
+          },
+        ],
+      });
+      console.log(cuentas);
+      if (!cuentas || cuentas.length === 0) {
+        return res.status(404).json({ mensaje: "No hay cuentas registradas" });
+      }
 
-    return res.status(200).json(cuentas);
-  } catch (error) {
-    return res.status(500).json({
-      mensaje: "Error al listar cuentas",
-      error: error.message,
-    });
-  }
+      return res.status(200).json(cuentas);
+    } catch (error) {
+      return res.status(500).json({
+        mensaje: "Error al listar cuentas",
+        error: error.message,
+      });
+    }
   }
 
   async listarCuentas(req, res) {
     try {
       const cuentas = await Cuenta.findAll({
-        attributes: ["correo", "estado", "id", "createdAt", "external"],
+        attributes: ["correo", "estado", "id", "createdAt", "external", "isAdmn"],
         include: [
           {
             model: Persona,
             as: "persona",
-          attributes: ["nombre", "apellido", "cedula"],
+            attributes: ["nombre", "apellido", "cedula"],
           },
-          {
-            model: Rol,
-            as: "rol",
-            attributes: ["nombre"]
-          }
-        ]
+        ],
       });
 
       if (!cuentas || cuentas.length === 0) {
         return res.status(404).json({
           mensaje: "No existen usuarios registrados",
-          usuarios: []
+          usuarios: [],
         });
       }
 
       // Filtramos cuentas válidas y que no sean ADMIN
       const usuarios = cuentas
-        .filter(c => c && c.persona && c.correo && c.rol?.nombre !== "ADMIN")
-        .map(c => ({
-          nombre: `${c.persona.nombre || "Sin nombre"} ${c.persona.apellido || "Sin apellido"}`,
+        .filter((c) => c && c.persona && c.correo && c.isAdmn == false)
+        .map((c) => ({
+          nombre: `${c.persona.nombre || "Sin nombre"} ${
+            c.persona.apellido || "Sin apellido"
+          }`,
           cedula: c.persona.cedula || "No disponible",
           correo: c.correo,
-          rol: c.rol?.nombre || "Sin rol asignado",
           estado: c.estado ? "Activo" : "Inactivo",
           external: c.external,
-          registrado_en: c.createdAt ? c.createdAt.toISOString().split("T")[0] : "Fecha no disponible"
+          registrado_en: c.createdAt
+            ? c.createdAt.toISOString().split("T")[0]
+            : "Fecha no disponible",
         }));
 
       if (usuarios.length === 0) {
         return res.status(200).json({
           mensaje: "No hay usuarios válidos registrados",
           total: 0,
-          usuarios: []
+          usuarios: [],
         });
       }
 
       return res.status(200).json({
         mensaje: "Lista de usuarios obtenida correctamente",
         total: usuarios.length,
-        usuarios
+        usuarios,
       });
-
     } catch (error) {
-      console.error("❌ Error crítico al listar cuentas:", error);
+      console.error("Error crítico al listar cuentas:", error);
       return res.status(500).json({
         mensaje: "Error interno al listar usuarios",
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -196,18 +188,22 @@ console.log(cuentas);
     try {
       const { external } = req.params;
       const cuenta = await Cuenta.findOne({ where: { external } });
-
+      const persona = await Persona.findOne({
+        where: { id: cuenta.personaId },
+      });
       if (!cuenta) {
         return res.status(404).json({ mensaje: "Cuenta no encontrada" });
       }
 
       // Invertir el estado
+      persona.estado = !persona.estado;
       cuenta.estado = !cuenta.estado;
+      await persona.save();
       await cuenta.save();
 
       res.status(200).json({
         mensaje: "Estado de la cuenta actualizado exitosamente",
-        estado: cuenta.estado ? "Activo" : "Inactivo"
+        estado: cuenta.estado ? "Activo" : "Inactivo",
       });
     } catch (error) {
       res.status(500).json({
@@ -217,11 +213,7 @@ console.log(cuentas);
     }
   }
 
-
-
-
-    
-//cuentas para aprobarlas  HU7: Listar cuentas
+  //cuentas para aprobarlas  HU7: Listar cuentas
   async listarCuentasPorAprobar(req, res) {
     try {
       const cuentas = await Cuenta.findAll({
@@ -230,11 +222,7 @@ console.log(cuentas);
           {
             model: Persona,
             as: "persona",
-          attributes: ["nombre", "apellido", "cedula"],
-          },
-          {
-            model: Colaborador,
-            as: "colaborador",
+            attributes: ["nombre", "apellido", "cedula"],
           },
         ],
       });
@@ -250,7 +238,7 @@ console.log(cuentas);
           external: c.external,
           correo: c.correo,
           estado: c.estado,
-          esAdmin: c.esAdmin,
+          esAdmin: c.isAdmn,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
 
@@ -258,13 +246,9 @@ console.log(cuentas);
             ? {
                 nombre: persona.nombre,
                 apellido: persona.apellido,
-                cedula : persona.cedula,
+                cedula: persona.cedula,
               }
             : null,
-
-          colaborador: Array.isArray(c.colaborador)
-            ? c.colaborador[0] || null
-            : c.colaborador,
         };
       });
 
@@ -281,14 +265,21 @@ console.log(cuentas);
   async desactivarCuenta(req, res) {
     try {
       const { external } = req.params;
-
       const cuenta = await Cuenta.findOne({ where: { external } });
-
+      const persona = await Persona.findOne({
+        where: { id: cuenta.personaId },
+      });
       if (!cuenta) {
         return res.status(404).json({ mensaje: "Cuenta no encontrada" });
       }
+         if (!persona) {
+        return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      }
 
+      // Invertir el estado
+      persona.estado = false;
       cuenta.estado = false;
+      await persona.save();
       await cuenta.save();
 
       res.status(200).json({ mensaje: "Cuenta desactivada exitosamente" });
@@ -300,28 +291,31 @@ console.log(cuentas);
     }
   }
   async rechazarPeticion(req, res) {
-  try {
-    const { external } = req.params;
+    try {
+      const { external } = req.params;
 
-    const cuenta = await Cuenta.findOne({ where: { external } });
+      const cuenta = await Cuenta.findOne({ where: { external } });
 
+      if (!cuenta) {
+        return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      }
+      const persona = await Persona.findOne({ where: cuenta.personaId });
 
-    if (!cuenta) {
-      return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      if (!persona) {
+        return res.status(404).json({ mensaje: "Cuenta no encontrada" });
+      }
+
+      await cuenta.destroy();
+      await persona.destroy();
+
+      res.status(200).json({ mensaje: "Cuenta eliminada exitosamente" });
+    } catch (error) {
+      res.status(500).json({
+        mensaje: "Error al eliminar",
+        error: error.message,
+      });
     }
-    const persona = await Persona.findOne({where: cuenta.personaId })
-
-    await cuenta.destroy();
-        await persona.destroy();
-
-    res.status(200).json({ mensaje: "Cuenta eliminada exitosamente" });
-  } catch (error) {
-    res.status(500).json({
-      mensaje: "Error al eliminar",
-      error: error.message,
-    });
-  }
-}
+  }
 }
 
 module.exports = new CuentaController();
