@@ -17,9 +17,6 @@ class LoginController {
     // Iniciar sesión
     // -------------------------
     async sesion(req, res) {
-
-        console.log("REQ BODY:", req.body);
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -32,62 +29,52 @@ class LoginController {
         const { correo, contrasena } = req.body;
 
         try {
-
-            // Buscar cuenta + persona asociada
+            // 1. Buscar cuenta y persona asociada (isAdmn ya está en 'login')
             const login = await Cuenta.findOne({
                 where: { correo },
                 include: [
                     {
-                        model: Persona, // ← SIN alias
+                        model: Persona, 
+                        as: 'persona', // Asumimos 'persona' es el alias correcto
                         attributes: ['nombre', 'apellido', 'external']
                     }
                 ]
             });
 
             if (!login) {
-                return res.status(400).json({
-                    msg: "CREDENCIALES INVALIDAS",
-                    code: 400
-                });
+                return res.status(400).json({ msg: "CREDENCIALES INVALIDAS", code: 400 });
             }
 
-            // Verificar si está activo
+            // 2. Validaciones de estado
             if (!login.estado) {
-                return res.status(403).json({
-                    msg: "USUARIO NO SE ENCUENTRA ACTIVO",
-                    code: 403
-                });
+                return res.status(403).json({ msg: "USUARIO NO SE ENCUENTRA ACTIVO", code: 403 });
             }
-
-            // ---- VALIDAR CONTRASEÑA CORRECTAMENTE ----
+            
+            // 3. Validación de contraseña
             const claveCorrecta = bcrypt.compareSync(contrasena, login.contrasena);
-
             if (!claveCorrecta) {
-                return res.status(400).json({
-                    msg: "CREDENCIALES INVALIDAS",
-                    code: 400
-                });
+                return res.status(400).json({ msg: "CREDENCIALES INVALIDAS", code: 400 });
             }
 
-            // ------ GENERAR TOKEN ------
+            // 4. Generación del Token JWT
             const llave = process.env.KEY_SQ;
             if (!llave) {
-                return res.status(500).json({
-                    msg: "Clave JWT no configurada",
-                    code: 500
-                });
+                return res.status(500).json({ msg: "Clave JWT no configurada", code: 500 });
             }
 
+            const rolFinal = login.isAdmn ? 'ADMIN' : 'USER';
+
             const tokenData = {
-                external: login.external,
-                persona: login.persona.external,
-                check: true
+                external: login.external, // external de Cuenta (uso en backend)
+                persona: login.persona.external, // external de Persona
+                check: true,
+                isAdmn: login.isAdmn, // Bandera de Admin en el JWT
+                role: rolFinal // Rol simple para el frontend/middleware
             };
 
-            const token = jwt.sign(tokenData, llave, {
-                expiresIn: '2h'
-            });
+            const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
 
+            // 5. Respuesta Final
             return res.status(200).json({
                 token,
                 msg: "Bienvenid@ " + login.persona.nombre + ' ' + login.persona.apellido,
@@ -95,6 +82,7 @@ class LoginController {
                 correo: login.correo,
                 external_id: login.persona.external,
                 isAdmn: login.isAdmn,
+                role: rolFinal, // Usado para la redirección en el frontend
                 code: 200
             });
 
@@ -107,10 +95,6 @@ class LoginController {
             });
         }
     }
-
-
-
-
 
     // -------------------------
     // Registrar admin

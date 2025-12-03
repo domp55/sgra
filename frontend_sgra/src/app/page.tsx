@@ -3,26 +3,29 @@
 import { useState, useCallback } from 'react';
 import { Mail, Lock, LucideIcon } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
-import { inicio_sesion } from '../hooks/Autenticacion'; // Asume que devuelve Promise<LoginResponse>
+import { inicio_sesion } from '../hooks/Autenticacion'; 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import mensajes from '../components/Mensajes'; // Función para mostrar notificaciones (toasts/alerts)
+import mensajes from '../components/Mensajes'; 
 import type { FormEvent, ChangeEvent } from 'react';
+import Cookies from 'js-cookie'; // RECOMENDACIÓN: Instalar js-cookie para manejo seguro
 
-// --- 1. DEFINICIÓN DE TIPOS ---
+// --- 1. DEFINICIÓN DE TIPOS (Actualizada según tu Backend) ---
 
 /**
- * Define la estructura de la respuesta esperada del backend tras el login.
+ * Define la estructura de la respuesta del backend.
+ * Debe coincidir con el JSON que retorna tu LoginController.
  */
 interface LoginResponse {
   code: number;
   msg: string;
-  role?: "ADMIN" | "USER"; // Tipado estricto para los roles
+  token?: string;        // El JWT es opcional en la definición por si falla el login
+  user?: string;
+  external_id?: string;
+  role?: "ADMIN" | "USER" | "USUARIO_SIN_ROL"; // Roles esperados
+  isAdmn?: boolean;      // Bandera de respaldo
 }
 
-/**
- * Define los props para el componente de campo de entrada reutilizable.
- */
 interface InputFieldProps {
   label: string;
   type: string;
@@ -31,26 +34,16 @@ interface InputFieldProps {
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   Icon: LucideIcon;
   required?: boolean;
-  maxLength?: number; // Límite de caracteres para seguridad y UX
+  maxLength?: number;
 }
 
-// --- 2. COMPONENTE REUTILIZABLE: InputField ---
-
+// --- 2. COMPONENTE REUTILIZABLE: InputField (Sin cambios) ---
 const InputField: React.FC<InputFieldProps> = ({ 
-  label, 
-  type, 
-  placeholder, 
-  value, 
-  onChange, 
-  Icon, 
-  required = false,
-  maxLength 
+  label, type, placeholder, value, onChange, Icon, required = false, maxLength 
 }) => {
-  // Manejo de la validación nativa del navegador (UX)
   const handleInvalid = (e: FormEvent<HTMLInputElement>) => {
     (e.target as HTMLInputElement).setCustomValidity(`Por favor ingresa tu ${label.toLowerCase()}`);
   };
-
   const handleInput = (e: FormEvent<HTMLInputElement>) => {
     (e.target as HTMLInputElement).setCustomValidity("");
   };
@@ -69,8 +62,7 @@ const InputField: React.FC<InputFieldProps> = ({
           required={required}
           onInvalid={handleInvalid}
           onInput={handleInput}
-          maxLength={maxLength} // Aplicación del límite de caracteres
-          // Mejoras de Accesibilidad y Autocompletado (seguridad y UX)
+          maxLength={maxLength}
           autoComplete={type === 'email' ? 'email' : (type === 'password' ? 'current-password' : 'off')}
         />
       </div>
@@ -81,57 +73,66 @@ const InputField: React.FC<InputFieldProps> = ({
 // --- 3. COMPONENTE PRINCIPAL: LoginPage ---
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [contrasena, setContrasena] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = useCallback(async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleLogin = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isLoading) return; 
 
-    if (isLoading) return; 
+    setIsLoading(true);
+    const data = { correo: email, contrasena: contrasena };
 
-    setIsLoading(true);
-    
-    const data = { correo: email, contrasena: contrasena };
+    try {
+      const info: LoginResponse = await inicio_sesion(data);
 
-    try {
-      const info: LoginResponse = await inicio_sesion(data);
+      // Verificamos código 200 y que exista el token
+      if (info.code === 200 && info.token) {
+        
+        // --- PASO CRÍTICO DE SEGURIDAD: GUARDAR SESIÓN ---
+        // Guardamos el token para que las siguientes peticiones funcionen.
+        // Opción A (Mejor para Next.js): Usar Cookies
+        // Cookies.set('token', info.token, { expires: 1/12, secure: true }); // 2 horas aprox
+        
+        // Opción B (Estándar simple): LocalStorage
+        localStorage.setItem('token', info.token);
+        localStorage.setItem('user_role', info.role || '');
+        localStorage.setItem('external', info.external_id || '');
 
-      if (info.code === 200) {
-        mensajes(info.msg, "Has Ingresado al Sistema", "success");
-        
-        const path = info.role === "ADMIN" ? "/admin/lista" : "/user/principal";
-        router.push(path);
-      } else {
-        // CAMBIO CLAVE: Mensaje de error genérico
-        mensajes("Usuario o contraseña inválidos. Por favor, verifica tus credenciales.", "Error de Inicio de Sesión", "error");
-        // Aunque la respuesta 'info.msg' del backend contenga el error específico,
-        // el frontend solo muestra este mensaje genérico.
-      }
-    } catch (err) {
-      // ... (Manejo de error de conexión/red)
-      if (process.env.NEXT_PUBLIC_DEBUG_MODE === 'true') {
-        console.error("Error en inicio_sesion:", err); 
-      }
-      mensajes("Error de conexión al servidor. Intenta de nuevo.", "Error de Conexión", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [email, contrasena, isLoading, router]);
+        mensajes(info.msg, "Bienvenido", "success");
+        
+        // --- REDIRECCIÓN SEGURA ---
+        // Usamos el rol que viene del backend.
+        // Si alguien manipula este JS localmente, no importa, porque el backend
+        // rechazará sus peticiones a /admin si el token no tiene el rol 'ADMIN'.
+        
+        if (info.role === "ADMIN") {
+            // router.replace borra el historial del login, impidiendo volver atrás
+            router.replace("/admin/lista"); 
+        } else {
+            router.replace("/user/principal");
+        }
+
+      } else {
+        mensajes(info.msg || "Credenciales incorrectas", "Error", "error");
+      }
+    } catch (err) {
+      console.error("Error login:", err);
+      mensajes("No se pudo conectar con el servidor", "Error de Conexión", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [email, contrasena, isLoading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      
-      {/* Switch de Tema */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
 
-      {/* Card del Login */}
       <div className="w-full max-w-md bg-card border border-border shadow-2xl rounded-xl p-8">
-
-        {/* Títulos */}
         <h1 className="text-3xl font-extrabold text-center text-foreground mb-1">
           Iniciar Sesión
         </h1>
@@ -139,10 +140,7 @@ export default function LoginPage() {
           Bienvenido al sistema SGRA
         </p>
 
-        {/* FORMULARIO */}
         <form onSubmit={handleLogin} className="space-y-5">
-
-          {/* CORREO (Límite: 254) */}
           <InputField 
             label="Correo" 
             type="email" 
@@ -154,7 +152,6 @@ export default function LoginPage() {
             maxLength={254}
           />
 
-          {/* CONTRASEÑA (Límite: 100) */}
           <InputField 
             label="Contraseña" 
             type="password" 
@@ -166,13 +163,11 @@ export default function LoginPage() {
             maxLength={100}
           />
 
-          {/* BOTÓN (con estado de carga) */}
           <button
             type="submit"
             className="btn-primary w-full py-2 flex justify-center items-center text-lg font-semibold transition duration-200"
             disabled={isLoading} 
           >
-            {/* Indicador de carga */}
             {isLoading ? (
               <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -182,16 +177,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* ENLACES ADICIONALES */}
         <div className="mt-8 text-center text-sm text-muted-foreground space-y-3">
-          
           <div>
             ¿Olvidaste tu contraseña?{' '}
             <span className="text-green-600 font-medium cursor-pointer hover:text-green-500 transition-colors">
               Contactate con el administrador
             </span>
           </div>
-
           <div>
             ¿Aún no estas registrado?{' '}
             <Link href="/user/registro" className="text-blue-600 hover:underline font-medium transition-colors">
