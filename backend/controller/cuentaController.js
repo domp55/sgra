@@ -34,7 +34,7 @@ class CuentaController {
       }
 
       // Verificar que el rol "DESARROLLADOR" exista
-      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLLADOR" } });
+      const rolPorDefecto = await Rol.findOne({ where: { nombre: "DESARROLADOR" } });
       if (!rolPorDefecto) {
         return res.status(500).json({
           mensaje: "Error: No existe el rol por defecto 'DESARROLLADOR'."

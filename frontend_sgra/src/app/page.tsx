@@ -1,137 +1,203 @@
 'use client';
 
-import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Mail, Lock, LucideIcon } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
-import { inicio_sesion } from '../hooks/Autenticacion';
+import { inicio_sesion } from '../hooks/Autenticacion'; // Asume que devuelve Promise<LoginResponse>
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import mensajes from '../components/Mensajes';
+import mensajes from '../components/Mensajes'; // Función para mostrar notificaciones (toasts/alerts)
+import type { FormEvent, ChangeEvent } from 'react';
 
-export default function LoginPage() {
+// --- 1. DEFINICIÓN DE TIPOS ---
 
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [contrasena, setContrasena] = useState('');
+/**
+ * Define la estructura de la respuesta esperada del backend tras el login.
+ */
+interface LoginResponse {
+  code: number;
+  msg: string;
+  role?: "ADMIN" | "USER"; // Tipado estricto para los roles
+}
 
-  const handleLogin = (e: any) => {
-    e.preventDefault();
+/**
+ * Define los props para el componente de campo de entrada reutilizable.
+ */
+interface InputFieldProps {
+  label: string;
+  type: string;
+  placeholder: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  Icon: LucideIcon;
+  required?: boolean;
+  maxLength?: number; // Límite de caracteres para seguridad y UX
+}
 
-    // Preparamos los datos para enviar
-    const data = { correo: email, contrasena: contrasena };
+// --- 2. COMPONENTE REUTILIZABLE: InputField ---
 
-    // Llamamos a la función de inicio de sesión
-    inicio_sesion(data).then((info) => {
+const InputField: React.FC<InputFieldProps> = ({ 
+  label, 
+  type, 
+  placeholder, 
+  value, 
+  onChange, 
+  Icon, 
+  required = false,
+  maxLength 
+}) => {
+  // Manejo de la validación nativa del navegador (UX)
+  const handleInvalid = (e: FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity(`Por favor ingresa tu ${label.toLowerCase()}`);
+  };
 
-      console.log("INFO LOGIN:", info); // para debug
-
-      if (info.code === 200) {
-
-        // Guardar mensaje de éxito
-        mensajes(info.msg, "Has Ingresado al Sistema", "success");
-
-        // Redirección según rol
-        if (info.role === "ADMIN") {
-          console.log("Redirigiendo a admin/lista");
-          router.push("/admin/lista");
-        } else {
-          console.log("Redirigiendo a user/principal");
-          router.push("/user/principal");
-        }
-
-        return;
-      } else {
-        mensajes(info.msg, "Error", "error");
-        return;
-      }
-
-    }).catch(err => {
-      console.error("Error en inicio_sesion:", err);
-      mensajes("Error de conexión al servidor", "Error", "error");
-    });
+  const handleInput = (e: FormEvent<HTMLInputElement>) => {
+    (e.target as HTMLInputElement).setCustomValidity("");
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div>
+      <label className="text-sm text-muted-foreground">{label}</label>
+      <div className="relative mt-1">
+        <Icon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type={type}
+          className="input-field pl-10"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          required={required}
+          onInvalid={handleInvalid}
+          onInput={handleInput}
+          maxLength={maxLength} // Aplicación del límite de caracteres
+          // Mejoras de Accesibilidad y Autocompletado (seguridad y UX)
+          autoComplete={type === 'email' ? 'email' : (type === 'password' ? 'current-password' : 'off')}
+        />
+      </div>
+    </div>
+  );
+};
 
-      {/* Switch de Tema arriba a la derecha */}
-      <div className="absolute top-4 right-4">
+// --- 3. COMPONENTE PRINCIPAL: LoginPage ---
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = useCallback(async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isLoading) return; 
+
+    setIsLoading(true);
+    
+    const data = { correo: email, contrasena: contrasena };
+
+    try {
+      const info: LoginResponse = await inicio_sesion(data);
+
+      if (info.code === 200) {
+        mensajes(info.msg, "Has Ingresado al Sistema", "success");
+        
+        const path = info.role === "ADMIN" ? "/admin/lista" : "/user/principal";
+        router.push(path);
+      } else {
+        // CAMBIO CLAVE: Mensaje de error genérico
+        mensajes("Usuario o contraseña inválidos. Por favor, verifica tus credenciales.", "Error de Inicio de Sesión", "error");
+        // Aunque la respuesta 'info.msg' del backend contenga el error específico,
+        // el frontend solo muestra este mensaje genérico.
+      }
+    } catch (err) {
+      // ... (Manejo de error de conexión/red)
+      if (process.env.NEXT_PUBLIC_DEBUG_MODE === 'true') {
+        console.error("Error en inicio_sesion:", err); 
+      }
+      mensajes("Error de conexión al servidor. Intenta de nuevo.", "Error de Conexión", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [email, contrasena, isLoading, router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      
+      {/* Switch de Tema */}
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
 
       {/* Card del Login */}
-      <div className="w-full max-w-md bg-card border border-border shadow-md rounded-xl p-8">
+      <div className="w-full max-w-md bg-card border border-border shadow-2xl rounded-xl p-8">
 
         {/* Títulos */}
-        <h1 className="text-2xl font-bold text-center text-foreground">
+        <h1 className="text-3xl font-extrabold text-center text-foreground mb-1">
           Iniciar Sesión
         </h1>
         <p className="text-center text-muted-foreground mb-6">
           Bienvenido al sistema SGRA
         </p>
 
-        {/* FORM */}
+        {/* FORMULARIO */}
         <form onSubmit={handleLogin} className="space-y-5">
 
-          {/* CORREO */}
-          <div>
-            <label className="text-sm text-muted-foreground">Correo</label>
-            <div className="relative mt-1">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                className="input-field pl-10"
-                placeholder="correo@ejemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                onInvalid={(e: any) => e.target.setCustomValidity("Por favor ingresa tu correo")}
-                onInput={(e: any) => e.target.setCustomValidity("")}
-              />
-            </div>
-          </div>
+          {/* CORREO (Límite: 254) */}
+          <InputField 
+            label="Correo" 
+            type="email" 
+            placeholder="correo@ejemplo.com" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            Icon={Mail} 
+            required={true}
+            maxLength={254}
+          />
 
-          {/* CONTRASEÑA */}
-          <div>
-            <label className="text-sm text-muted-foreground">Contraseña</label>
-            <div className="relative mt-1">
-              <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="password"
-                className="input-field pl-10"
-                placeholder="Ingresa tu contraseña"
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-                required
-                onInvalid={(e: any) => e.target.setCustomValidity("Por favor ingresa tu contraseña")}
-                onInput={(e: any) => e.target.setCustomValidity("")}
-              />
-            </div>
-          </div>
+          {/* CONTRASEÑA (Límite: 100) */}
+          <InputField 
+            label="Contraseña" 
+            type="password" 
+            placeholder="Ingresa tu contraseña" 
+            value={contrasena} 
+            onChange={(e) => setContrasena(e.target.value)} 
+            Icon={Lock} 
+            required={true}
+            maxLength={100}
+          />
 
-          {/* BOTÓN */}
+          {/* BOTÓN (con estado de carga) */}
           <button
             type="submit"
-            className="btn-primary w-full py-2 flex justify-center"
+            className="btn-primary w-full py-2 flex justify-center items-center text-lg font-semibold transition duration-200"
+            disabled={isLoading} 
           >
-            Iniciar Sesión
+            {/* Indicador de carga */}
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : 'Iniciar Sesión'}
           </button>
         </form>
 
-        {/* Recuperar */}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          ¿Olvidaste tu contraseña?{' '}
-          <span className="text-green-600 font-medium">
-            Contactate con el administrador
-          </span>
-        </div>
+        {/* ENLACES ADICIONALES */}
+        <div className="mt-8 text-center text-sm text-muted-foreground space-y-3">
+          
+          <div>
+            ¿Olvidaste tu contraseña?{' '}
+            <span className="text-green-600 font-medium cursor-pointer hover:text-green-500 transition-colors">
+              Contactate con el administrador
+            </span>
+          </div>
 
-        {/* Registro */}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          ¿Aún no estas registrado?{' '}
-          <Link href="/user/registro" className="text-blue-600 hover:underline font-medium">
-            Envia una solicitud de registro
-          </Link>
+          <div>
+            ¿Aún no estas registrado?{' '}
+            <Link href="/user/registro" className="text-blue-600 hover:underline font-medium transition-colors">
+              Envia una solicitud de registro
+            </Link>
+          </div>
         </div>
       </div>
     </div>
