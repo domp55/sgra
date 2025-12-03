@@ -1,32 +1,42 @@
-'use strict';
+const { UUIDV4 } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-    const cuenta = sequelize.define('cuenta', {
-        external: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4 },
-        estado: { type: DataTypes.BOOLEAN,  defaultValue: true },
-        esAdmin: { type: DataTypes.BOOLEAN, allowNull: false },
-        correo: { type: DataTypes.STRING(75), allowNull: false },
-        contrasena: { type: DataTypes.STRING(250), allowNull: false }
-    }, {
-        freezeTableName: true
-    });
+    const Cuenta = sequelize.define("cuenta", {
+        correo: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true
+        },
+        contrasena: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        estado: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false // Inicialmente desactivada hasta ser aprobada
+        },
+        external: {
+            type: DataTypes.UUID,
+            defaultValue: UUIDV4
+        },
+        isAdmn: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        // Clave foránea (FK) de Persona
+        personaId: {
+            type: DataTypes.INTEGER, // Asumiendo que el ID primario es INTEGER
+            allowNull: false
+        }
+    }, { freezeTableName: true });
 
-    cuenta.associate = function (models) {
-        // Relación con persona
-        cuenta.belongsTo(models.persona, { foreignKey: 'personaId' });
-
-        // Relación con colaborador
-        cuenta.hasMany(models.colaborador, {
-            foreignKey: "cuentaID",
-            as: "colaborador"
-        });
-
-        // ⭐ Nueva relación con rol (cada cuenta tiene un rol)
-        cuenta.belongsTo(models.rol, {
-            foreignKey: "rolID",
-            as: "rol"
-        });
+    Cuenta.associate = (models) => {
+        // Relación: Cuenta pertenece a una Persona (pertenece a 1)
+        Cuenta.belongsTo(models.persona, { foreignKey: "personaId" });
+        
+        // Relación: Una Cuenta puede tener muchos Colaboradores
+        Cuenta.hasMany(models.colaborador, { foreignKey: "cuentaID" });
     };
 
-    return cuenta;
+    return Cuenta;
 };
