@@ -11,13 +11,19 @@ router.post(
 );
 
 // -------------------------
-// listar proyecto
+// listar proyectos general
 // -------------------------
 router.get(
     '/listar',
     proController.listarProyecto
 );
 
-
+// -------------------------
+// listar proyectos usuario especifico
+// -------------------------
+router.get(
+    '/listar/:externalCuenta',
+    proController.listarProyectoColaborador
+);
 
 module.exports = router;
