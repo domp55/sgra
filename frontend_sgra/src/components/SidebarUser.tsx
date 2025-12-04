@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const menuItems = [
   { name: "Proyectos", href: "/admin/aprobar", icon: Home },
@@ -11,6 +12,13 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [userName, setUserName] = useState("Usuario");
+
+  // Cargar usuario desde sessionStorage al montar
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem("user");
+    if (storedUser) setUserName(storedUser);
+  }, []);
 
   const handleLogout = () => {
     sessionStorage.removeItem("token");
@@ -19,10 +27,6 @@ export default function Sidebar() {
     router.push("/");
   };
 
-  // Obtener info del usuario desde sessionStorage
-  const userName = sessionStorage.getItem("user") || "Usuario";
-  
-  // Generar iniciales
   const initials = userName
     .split(" ")
     .map((n) => n[0])

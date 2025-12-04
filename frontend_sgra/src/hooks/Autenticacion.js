@@ -9,7 +9,8 @@ export async function inicio_sesion(data) {
         if (sesion.code === 200 && sesion.token) {
             saveToken(sesion.token);
             save('user', sesion.user);
-            save('external', sesion.external);
+            save('external_cuenta', sesion.external_cuenta);
+            save('external', sesion.external_persona);
         }
 
         return sesion;

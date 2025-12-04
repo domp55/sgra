@@ -3,11 +3,11 @@ export const save = (key, data) => {
 }
 
 export const get = (key) => {
-   return sessionStorage.getItem(key, data);
+    return sessionStorage.getItem(key);
 }
 
 export const saveToken = (key) => {
-    sessionStorage.setItem("token",key);
+    sessionStorage.setItem("token", key);
 }
 
 export const getToken = () => {
