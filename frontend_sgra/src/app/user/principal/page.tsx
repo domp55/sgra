@@ -191,6 +191,11 @@ export default function MisProyectos() {
         const fechaFin = (document.getElementById("swal-fechaFin") as HTMLInputElement).value;
         const coberturaMin = parseInt((document.getElementById("swal-coberturaPruebasMinima") as HTMLInputElement).value);
 
+        // NUEVOS CAMPOS
+        const objetivosCalidad = (document.getElementById("swal-objetivosCalidad") as HTMLTextAreaElement).value.trim();
+        const definicionDone = (document.getElementById("swal-definicionDone") as HTMLTextAreaElement).value.trim();
+        const criteriosEntradaQA = (document.getElementById("swal-criteriosEntradaQA") as HTMLTextAreaElement).value.trim();
+
         // Validaciones
         if (!nombre) return Swal.showValidationMessage("El nombre del proyecto es obligatorio");
         if (!descripcion) return Swal.showValidationMessage("La descripción es obligatoria");
@@ -206,7 +211,19 @@ export default function MisProyectos() {
         if (new Date(fechaFin) < new Date(fechaInicio)) return Swal.showValidationMessage("La fecha fin no puede ser menor que la fecha de inicio");
 
         // Si pasa todo, retornar valores
-        return { nombre, acronimo: acronimo || undefined, descripcion, tiempoSprint, nroSprints, fechaInicio, fechaFin, coberturaPruebasMinima: isNaN(coberturaMin) ? undefined : coberturaMin };
+        return {
+          nombre,
+          acronimo: acronimo || undefined,
+          descripcion,
+          tiempoSprint,
+          nroSprints,
+          fechaInicio,
+          fechaFin,
+          coberturaPruebasMinima: isNaN(coberturaMin) ? undefined : coberturaMin,
+          objetivosCalidad: objetivosCalidad || undefined,
+          definicionDone: definicionDone || undefined,
+          criteriosEntradaQA: criteriosEntradaQA || undefined
+        };
       }
     });
 
