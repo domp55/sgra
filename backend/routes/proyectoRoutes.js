@@ -18,6 +18,14 @@ router.get(
     proController.listarProyecto
 );
 
+router.get(
+    '/listarTodos',
+    proController.listarProyectoSinAprobar
+);
+router.get(
+    '/listarActivos',
+    proController.listarProyectosAprobados
+);
 // -------------------------
 // listar proyectos usuario especifico
 // -------------------------
@@ -26,4 +34,9 @@ router.get(
     proController.listarProyectoColaborador
 );
 
+
+router.patch(
+    '/cambiarEstado/:external',
+    proController.cambioEstado
+)
 module.exports = router;

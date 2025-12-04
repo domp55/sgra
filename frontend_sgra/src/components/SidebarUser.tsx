@@ -53,7 +53,7 @@ export default function Sidebar() {
             />
           </div>
           <div className="flex items-center text-center gap-2 font-bold text-xl tracking-tight text-foreground">
-            <span>Sistema de Gestión de Requisitos Ágiles </span>
+            <span>SGRA</span>
           </div>
         </div>
       </div>

@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Users, LogOut } from "lucide-react";
+import { Home, Users, LogOut, BriefcaseBusiness, Activity} from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 const menuItems = [
   { name: "Todos los Usuarios", href: "/admin/todos", icon: Users },
+    { name: "Solicitudes de Proyectos", href: "/admin/proyecto/aprobar", icon: BriefcaseBusiness },
+        { name: "Proyectos Activos", href: "/admin/proyecto/activos", icon: Activity },
+
+
 ];
 
 export default function Sidebar() {
@@ -64,7 +68,7 @@ export default function Sidebar() {
             />
           </div>
           <div className="flex items-center text-center gap-2 font-bold text-xl tracking-tight text-foreground">
-            <span>Sistema de Gestión de Requisitos Ágiles </span>
+            <span>SGRA</span>
           </div>
         </div>
       </div>
