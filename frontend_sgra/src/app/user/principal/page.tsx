@@ -24,6 +24,7 @@ interface ColaboradorType {
   };
 }
 
+
 interface ProjectType {
   nombre: string;
   acronimo?: string;
@@ -50,13 +51,20 @@ export default function MisProyectos() {
   // --------------------------------------------------
   const fetchData = async () => {
     const token = Cookies.get("token") || sessionStorage.getItem("token");
+    const externalCuenta = sessionStorage.getItem("external_cuenta");
 
     if (!token) return router.push("/");
+    if (!externalCuenta) {
+        console.error("No se encontró external_cuenta");
+        setData([]);
+        return;
+      }
 
     try {
       setLoading(true);
 
-      const response = await GET("/api/proyecto/listar", token);
+      //const response = await GET("/api/proyecto/listar", token);
+      const response = await GET(`/api/proyecto/listar/${encodeURIComponent(externalCuenta!)}`, token);
 
       console.log("Response:", response.data);
 

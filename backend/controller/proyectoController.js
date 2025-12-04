@@ -6,6 +6,7 @@ const db = require("../models");
 const Proyecto = db.proyecto;
 const RequisitoMaster = db.requisitomaster;
 const Colaborador = db.colaborador;
+const Cuenta = db.cuenta;
 const Rol = db.rol;
 
 class ProyectoController {
@@ -66,6 +67,45 @@ class ProyectoController {
             });
         }
     }
+
+    // =============================================
+    // LISTAR PROYECTOS POR COLABORADOR (EXTERNAL)
+    // =============================================
+    async listarProyectoColaborador(req, res) {
+        try {
+            const { externalCuenta } = req.params;
+
+            if (!externalCuenta) {
+                return res.status(400).json({ code: 400, msg: "Falta el external de la cuenta", data: [] });
+            }
+
+            const cuenta = await Cuenta.findOne({ where: { external: externalCuenta } });
+            if (!cuenta) {
+                return res.status(404).json({ code: 404, msg: "Cuenta no encontrada", data: [] });
+            }
+
+            const proyectos = await Proyecto.findAll({
+                include: [
+                    {
+                        model: Colaborador,
+                        where: { cuentaID: cuenta.id },
+                        include: [{ model: Rol, attributes: ["nombre"] }]
+                    }
+                ]
+            });
+
+            return res.status(200).json({
+                code: 200,
+                msg: proyectos.length ? "Lista de proyectos" : "No tiene proyectos",
+                data: proyectos
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ code: 500, msg: "Error al listar proyectos por cuenta", data: [] });
+        }
+    }
+
 
 
     // =============================================
