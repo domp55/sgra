@@ -30,7 +30,7 @@ router.post(
 );
 
 // Registrar admin
-router.put('/admin/restablecer', loginController.restablecerContraseña);
+router.put('/admin/restablecer', loginController.restablecerContrasena);
 
 
 
