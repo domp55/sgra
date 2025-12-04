@@ -69,7 +69,8 @@ class LoginController {
                 persona: login.persona.external, // external de Persona
                 check: true,
                 isAdmn: login.isAdmn, // Bandera de Admin en el JWT
-                role: rolFinal // Rol simple para el frontend/middleware
+                role: rolFinal, // Rol simple para el frontend/middleware
+                estado: login.estado
             };
 
             const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
@@ -82,6 +83,7 @@ class LoginController {
                 correo: login.correo,
                 external_id: login.persona.external,
                 isAdmn: login.isAdmn,
+                estado: login.estado,
                 role: rolFinal, // Usado para la redirección en el frontend
                 code: 200
             });

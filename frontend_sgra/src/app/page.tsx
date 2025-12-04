@@ -8,22 +8,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import mensajes from '../components/Mensajes'; 
 import type { FormEvent, ChangeEvent } from 'react';
-import Cookies from 'js-cookie'; // RECOMENDACIÓN: Instalar js-cookie para manejo seguro
+import Cookies from 'js-cookie'; 
+import Swal from 'sweetalert2';
 
-// --- 1. DEFINICIÓN DE TIPOS (Actualizada según tu Backend) ---
+// --- 1. DEFINICIÓN DE TIPOS ---
 
-/**
- * Define la estructura de la respuesta del backend.
- * Debe coincidir con el JSON que retorna tu LoginController.
- */
 interface LoginResponse {
   code: number;
   msg: string;
-  token?: string;        // El JWT es opcional en la definición por si falla el login
+  token?: string;
   user?: string;
   external_id?: string;
-  role?: "ADMIN" | "USER" | "USUARIO_SIN_ROL"; // Roles esperados
-  isAdmn?: boolean;      // Bandera de respaldo
+  role?: "ADMIN" | "USER" | "USUARIO_SIN_ROL";
+  // IMPORTANTE: Aceptamos boolean (true) o number (1) porque así viene de la BD
+  estado?: boolean | number; 
+  isAdmn?: boolean | number;
 }
 
 interface InputFieldProps {
@@ -88,31 +87,38 @@ export default function LoginPage() {
     try {
       const info: LoginResponse = await inicio_sesion(data);
 
-      // Verificamos código 200 y que exista el token
       if (info.code === 200 && info.token) {
         
-        // --- PASO CRÍTICO DE SEGURIDAD: GUARDAR SESIÓN ---
-        // Guardamos el token para que las siguientes peticiones funcionen.
-        // Opción A (Mejor para Next.js): Usar Cookies
-        // Cookies.set('token', info.token, { expires: 1/12, secure: true }); // 2 horas aprox
-        
-        // Opción B (Estándar simple): LocalStorage
-        localStorage.setItem('token', info.token);
+        // Guardar sesión
+        Cookies.set('token', info.token, { secure: true, sameSite: 'strict' });
+        sessionStorage.setItem('token', info.token);
         localStorage.setItem('user_role', info.role || '');
         localStorage.setItem('external', info.external_id || '');
 
         mensajes(info.msg, "Bienvenido", "success");
         
-        // --- REDIRECCIÓN SEGURA ---
-        // Usamos el rol que viene del backend.
-        // Si alguien manipula este JS localmente, no importa, porque el backend
-        // rechazará sus peticiones a /admin si el token no tiene el rol 'ADMIN'.
-        
+        // --- LÓGICA DE REDIRECCIÓN ---
         if (info.role === "ADMIN") {
-            // router.replace borra el historial del login, impidiendo volver atrás
-            router.replace("/admin/lista"); 
+            router.replace("/admin/todos");
         } else {
-            router.replace("/user/principal");
+            // VERIFICACIÓN ROBUSTA:
+            // Comprobamos si es true (booleano) O si es 1 (número de la BD)
+            const cuentaActiva = info.estado === true || info.estado === 1;
+
+            if (cuentaActiva) {
+                router.replace("/user/principal");
+            } else {
+                // Si es 0 o false, bloqueamos
+                Swal.fire({
+                    icon: "error",
+                    title: "Cuenta Inactiva",
+                    text: "Tu cuenta ha sido desactivada. Contacta al administrador.",
+                    confirmButtonColor: "#d33"
+                });
+                Cookies.remove("token");
+                sessionStorage.removeItem("token");
+                localStorage.clear();
+            }
         }
 
       } else {
