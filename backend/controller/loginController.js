@@ -4,6 +4,7 @@ const models = require('../models');
 const usuario = models.persona;
 const Cuenta = models.cuenta;
 const Persona = models.persona;
+const Colaborador = models.colaborador;
 const Rol = models.rol;
 const bcrypt = require('bcrypt');
 
@@ -17,6 +18,7 @@ class LoginController {
     // Iniciar sesión
     // -------------------------
     async sesion(req, res) {
+
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -29,13 +31,13 @@ class LoginController {
         const { correo, contrasena } = req.body;
 
         try {
-            // 1. Buscar cuenta y persona asociada (isAdmn ya está en 'login')
+            // 1. Buscar cuenta
             const login = await Cuenta.findOne({
                 where: { correo },
                 include: [
                     {
-                        model: Persona, 
-                        as: 'persona', // Asumimos 'persona' es el alias correcto
+                        model: Persona,
+                        as: 'persona',
                         attributes: ['nombre', 'apellido', 'external']
                     }
                 ]
@@ -45,46 +47,61 @@ class LoginController {
                 return res.status(400).json({ msg: "CREDENCIALES INVALIDAS", code: 400 });
             }
 
-            // 2. Validaciones de estado
+            // 2. Validación de estado
             if (!login.estado) {
                 return res.status(403).json({ msg: "USUARIO NO SE ENCUENTRA ACTIVO", code: 403 });
             }
-            
+
             // 3. Validación de contraseña
             const claveCorrecta = bcrypt.compareSync(contrasena, login.contrasena);
             if (!claveCorrecta) {
                 return res.status(400).json({ msg: "CREDENCIALES INVALIDAS", code: 400 });
             }
 
-            // 4. Generación del Token JWT
-            const llave = process.env.KEY_SQ;
-            if (!llave) {
-                return res.status(500).json({ msg: "Clave JWT no configurada", code: 500 });
+            // 4. Buscar rol real del usuario (colaborador)
+            const colaborador = await Colaborador.findOne({
+                where: { cuentaID: login.id },
+                include: [
+                    {
+                        model: Rol,
+                        attributes: ['nombre']
+                    }
+                ]
+            });
+
+            // Rol final
+            let rolFinal = "USER"; // Por defecto
+
+            if (login.isAdmn) {
+                rolFinal = "ADMIN";
+            } else if (colaborador) {
+                rolFinal = colaborador.rol.nombre;
+                // Ejemplo: "PRODUCT_OWNER"
             }
 
-            const rolFinal = login.isAdmn ? 'ADMIN' : 'USER';
+            // 5. Generar token
+            const llave = process.env.KEY_SQ;
 
             const tokenData = {
-                external: login.external, // external de Cuenta (uso en backend)
-                persona: login.persona.external, // external de Persona
-                check: true,
-                isAdmn: login.isAdmn, // Bandera de Admin en el JWT
-                role: rolFinal, // Rol simple para el frontend/middleware
+                external: login.external,
+                persona: login.persona.external,
+                isAdmn: login.isAdmn,
+                role: rolFinal,
                 estado: login.estado
             };
 
-            const token = jwt.sign(tokenData, llave, { expiresIn: '2h' });
+            const token = jwt.sign(tokenData, llave, { expiresIn: "2h" });
 
-            // 5. Respuesta Final
             return res.status(200).json({
                 token,
                 msg: "Bienvenid@ " + login.persona.nombre + ' ' + login.persona.apellido,
                 user: login.persona.nombre + ' ' + login.persona.apellido,
                 correo: login.correo,
-                external_id: login.persona.external,
+                external_cuenta: login.external,
+                external_persona: login.persona.external,
                 isAdmn: login.isAdmn,
                 estado: login.estado,
-                role: rolFinal, // Usado para la redirección en el frontend
+                role: rolFinal,
                 code: 200
             });
 
@@ -97,6 +114,7 @@ class LoginController {
             });
         }
     }
+
 
     // -------------------------
     // Registrar admin
@@ -178,8 +196,10 @@ class LoginController {
     }
 
 
-
-    async restablecerContraseña(req, res) {
+    // -------------------------
+    // Restablecer Contraseña
+    // -------------------------
+    async restablecerContrasena(req, res) {
         const { correo } = req.body;
         if (!correo) return res.status(400).json({ msg: "Debe proporcionar un correo", code: 400 });
 
@@ -187,21 +207,31 @@ class LoginController {
             // Buscar la cuenta
             const cuenta = await Cuenta.findOne({
                 where: { correo },
-                include: [{ model: usuario, as: 'persona', attributes: ['cedula'] }]
+                include: [{ model: Persona, as: 'persona', attributes: ['cedula'] }]
             });
 
-            if (!cuenta) return res.status(404).json({ msg: "Cuenta no encontrada", code: 404 });
+            if (!cuenta) {
+                return res.status(404).json({
+                    msg: "Cuenta no encontrada",
+                    code: 404
+                });
+            }
+
+            if (!cuenta.persona || !cuenta.persona.cedula) {
+                return res.status(500).json({
+                    msg: "Esta cuenta no tiene una persona asociada correctamente",
+                    code: 500
+                });
+            }
+
+            const cedula = cuenta.persona.cedula;
 
             // Generar hash de la cédula
             const salt = await bcrypt.genSalt(10);
-            const hashCedula = await bcrypt.hash(cuenta.persona.cedula, salt);
+            const hashCedula = await bcrypt.hash(cedula.toString(), salt);
 
-            // Actualizar la contraseña usando el mismo patrón que en tu modificar()
-            const result = await cuenta.update({ contrasena: hashCedula });
-
-            if (!result) {
-                return res.status(500).json({ msg: "No se pudo actualizar la contraseña", code: 500 });
-            }
+            // Actualizar contraseña
+            await cuenta.update({ contrasena: hashCedula });
 
             return res.status(200).json({
                 msg: "Contraseña restablecida temporalmente a la cédula",
@@ -210,7 +240,11 @@ class LoginController {
 
         } catch (error) {
             console.error("Error al restablecer contraseña:", error);
-            return res.status(500).json({ msg: "Error en servidor", code: 500, error: error.message });
+            return res.status(500).json({
+                msg: "Error en servidor",
+                code: 500,
+                error: error.message
+            });
         }
     }
 
