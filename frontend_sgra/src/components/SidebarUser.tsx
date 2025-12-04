@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const menuItems = [
-  { name: "Proyectos", href: "/admin/aprobar", icon: Home },
+  { name: "Proyectos", href: "/user/principal", icon: Home },
 ];
 
 export default function Sidebar() {
@@ -38,12 +39,22 @@ export default function Sidebar() {
     <aside className="w-64 h-screen sticky top-0 border-r border-border bg-background flex flex-col hidden md:flex transition-all">
       
       {/* LOGO / HEADER */}
-      <div className="h-16 flex items-center px-6 border-b border-border">
-        <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm">
-            S
+      <div className=" flex flex-col items-center justify-center px-6 border-b border-border">
+        <div className="flex flex-col items-center font-bold text-xl tracking-tight text-foreground">
+          {/* Imagen Logo UNL */}
+          <div className="py-2 relative mb-1">
+            <Image
+              src="/logoUNL.png"
+              alt="Logo UNL"
+              width={200}
+              height={50}
+              className="object-contain"
+              priority
+            />
           </div>
-          <span>SGRA System</span>
+          <div className="flex items-center text-center gap-2 font-bold text-xl tracking-tight text-foreground">
+            <span>Sistema de Gestión de Requisitos Ágiles </span>
+          </div>
         </div>
       </div>
 

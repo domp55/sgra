@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Users, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import Image from "next/image";
 const menuItems = [
   { name: "Todos los Usuarios", href: "/admin/todos", icon: Users },
 ];
@@ -34,7 +34,6 @@ export default function Sidebar() {
       .slice(0, 2);
 
     setInitials(ini);
-
   }, []); // Solo una vez
 
   const handleLogout = () => {
@@ -49,15 +48,24 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 h-screen sticky top-0 border-r border-border bg-background flex flex-col hidden md:flex transition-all">
-
+    <aside className="h-screen sticky top-0 border-r border-border bg-background flex flex-col hidden md:flex transition-all">
       {/* LOGO / HEADER */}
-      <div className="h-16 flex items-center px-6 border-b border-border">
-        <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm">
-            S
+      <div className=" flex flex-col items-center justify-center px-6 border-b border-border">
+        <div className="flex flex-col items-center font-bold text-xl tracking-tight text-foreground">
+          {/* Imagen Logo UNL */}
+          <div className="py-2 relative mb-1">
+            <Image
+              src="/logoUNL.png"
+              alt="Logo UNL"
+              width={200}
+              height={50}
+              className="object-contain"
+              priority
+            />
           </div>
-          <span>SGRA System</span>
+          <div className="flex items-center text-center gap-2 font-bold text-xl tracking-tight text-foreground">
+            <span>Sistema de Gestión de Requisitos Ágiles </span>
+          </div>
         </div>
       </div>
 
@@ -87,7 +95,6 @@ export default function Sidebar() {
       {/* FOOTER: Usuario + Logout */}
       <div className="p-4 border-t border-border bg-muted/20">
         <div className="flex flex-col gap-4">
-
           {/* Tarjeta Usuario */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
@@ -108,7 +115,6 @@ export default function Sidebar() {
             <LogOut size={14} />
             Cerrar Sesión
           </button>
-
         </div>
       </div>
     </aside>
