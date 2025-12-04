@@ -20,24 +20,36 @@ interface ColaboradorType {
   estado: boolean;
   external: string;
   rol: {
-    nombre: "PRODUCT_OWNER" | "Member";
+    nombre: "SCRUM_MASTER" | "Member";
   };
 }
 
 
 interface ProjectType {
+  // General
   nombre: string;
   acronimo?: string;
-  descripcion: string;
-  tiempoSprint: number;
-  nroSprints: number;
-  fechaInicio: string;
-  fechaFin: string;
-  estado: string;
-  estaActivo: boolean;
-  external: string; // identificador seguro
-  colaboradors: ColaboradorType[];
-  requisitomasters: any[]; // o puedes definir otra interfaz para esto
+  descripcion?: string;
+
+  // Cronograma
+  fechaInicio?: string; // Sequelize DATE se puede mapear a string en TS
+  fechaFin?: string;
+  estado?: "En Planificación" | "En Ejecución" | "En Pausa" | "Finalizado";
+  tiempoSprint?: number;
+  nroSprints?: number;
+
+  // Calidad
+  objetivosCalidad?: string;
+  definicionDone?: string;
+  criteriosEntradaQA?: string;
+  coberturaPruebasMinima?: number;
+
+  // Estado del proyecto
+  estaActivo?: boolean;
+  external?: string; // UUID
+
+  // Relaciones
+  colaboradors?: ColaboradorType[];
 }
 
 export default function MisProyectos() {
@@ -55,10 +67,10 @@ export default function MisProyectos() {
 
     if (!token) return router.push("/");
     if (!externalCuenta) {
-        console.error("No se encontró external_cuenta");
-        setData([]);
-        return;
-      }
+      console.error("No se encontró external_cuenta");
+      setData([]);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -91,7 +103,7 @@ export default function MisProyectos() {
   // --------------------------------------------------
   const filteredData = data.filter((item) =>
     item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+    item.descripcion!.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // --------------------------------------------------
@@ -100,10 +112,7 @@ export default function MisProyectos() {
   const handleCreateProject = async () => {
     const token = Cookies.get("token");
     if (!token) return;
-
     const cuentaID = sessionStorage.getItem("external_cuenta");
-    console.log("Cuenta", cuentaID);
-
     if (!cuentaID) {
       return Swal.fire("Error", "No se encontró la cuenta del usuario", "error");
     }
@@ -111,184 +120,105 @@ export default function MisProyectos() {
     const { value: formValues } = await Swal.fire({
       title: "Crear Nuevo Proyecto",
       html: `
-    <style>
-  .swal2-popup {
-    width: 650px !important;       /* Más ancho */
-    height: auto !important;       /* Permite crecer */
-    max-height: 90vh !important;   /* Evita que desborde la pantalla */
-  }
-
-  .swal2-html-container {
-    overflow: visible !important;  /* Quita scroll interno */
-  }
-
-  .swal2-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 10px;
-  }
-
-  .swal2-input[type="date"],
-  .swal2-input[type="number"],
-  .swal2-input {
-    font-size: 13px !important;
-    padding: 6px 8px !important;
-    height: 32px !important;
-  }
-
-  .swal2-label {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: #4a4a4a;
-    display: block;
-    text-align: left;
-  }
-
-  .swal2-col-span-2 {
-    grid-column: span 2;
-  }
-</style>
-
-
-    <div class="swal2-grid">
-
-      <div class="swal2-col-span-2">
-        <label class="swal2-label">Nombre del Proyecto</label>
-        <input id="swal-nombre" class="swal2-input" placeholder="Proyecto X">
+      <style>
+        .swal2-popup { width: 700px !important; max-height: 90vh !important; overflow-y: auto !important; }
+        .swal2-html-container { overflow: visible !important; max-height: none !important; }
+        .swal2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+        .swal2-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #4a4a4a; display: block; text-align: left; }
+        input, textarea { font-size: 13px; padding: 6px 8px; height: 32px; width: 100%; box-sizing: border-box; }
+        textarea { min-height: 70px; max-height: 200px; width: 100%; box-sizing: border-box; resize: vertical; }
+        .swal2-col-span-2 { grid-column: span 2; }
+      </style>
+      <div class="swal2-grid">
+        <div class="swal2-col-span-2">
+          <label class="swal2-label">Nombre del Proyecto *</label>
+          <input id="swal-nombre" placeholder="Proyecto X">
+        </div>
+        <div>
+          <label class="swal2-label">Acrónimo</label>
+          <input id="swal-acronimo" placeholder="PX (opcional)">
+        </div>
+        <div>
+          <label class="swal2-label">Duración Sprint (semanas)</label>
+          <input id="swal-tiempoSprint" type="number" placeholder="14">
+        </div>
+        <div>
+          <label class="swal2-label">Número de Sprints</label>
+          <input id="swal-nroSprints" type="number" placeholder="5">
+        </div>
+        <div>
+          <label class="swal2-label">Fecha Inicio</label>
+          <input id="swal-fechaInicio" type="date">
+        </div>
+        <div>
+          <label class="swal2-label">Fecha Fin</label>
+          <input id="swal-fechaFin" type="date">
+        </div>
+        <div class="swal2-col-span-2">
+          <label class="swal2-label">Descripción</label>
+          <textarea id="swal-descripcion" placeholder="Descripción breve"></textarea>
+        </div>
+        <div class="swal2-col-span-2">
+          <label class="swal2-label">Objetivos de Calidad</label>
+          <textarea id="swal-objetivosCalidad" placeholder="Objetivos de calidad del proyecto"></textarea>
+        </div>
+        <div class="swal2-col-span-2">
+          <label class="swal2-label">Definición de Done</label>
+          <textarea id="swal-definicionDone" placeholder="Criterios de finalización"></textarea>
+        </div>
+        <div class="swal2-col-span-2">
+          <label class="swal2-label">Criterios de Entrada QA</label>
+          <textarea id="swal-criteriosEntradaQA" placeholder="Criterios de entrada para QA"></textarea>
+        </div>
+        <div>
+          <label class="swal2-label">Cobertura de Pruebas Mínima (%)</label>
+          <input id="swal-coberturaPruebasMinima" type="number" placeholder="80">
+        </div>
       </div>
-
-      <div>
-        <label class="swal2-label">Acrónimo</label>
-        <input id="swal-acronimo" class="swal2-input" placeholder="PX (opcional)">
-      </div>
-
-      <div>
-        <label class="swal2-label">Duración Sprint (días)</label>
-        <input id="swal-tiempoSprint" type="number" class="swal2-input" placeholder="14">
-      </div>
-
-      <div>
-        <label class="swal2-label">Número de Sprints</label>
-        <input id="swal-nroSprints" type="number" class="swal2-input" placeholder="5">
-      </div>
-
-      <div>
-        <label class="swal2-label">Fecha Inicio</label>
-        <input id="swal-fechaInicio" type="date" class="swal2-input">
-      </div>
-
-      <div>
-        <label class="swal2-label">Fecha Fin</label>
-        <input id="swal-fechaFin" type="date" class="swal2-input">
-      </div>
-
-      <div class="swal2-col-span-2">
-        <label class="swal2-label">Descripción</label>
-        <input id="swal-descripcion" class="swal2-input" placeholder="Descripción breve">
-      </div>
-
-    </div>
-  `,
+    `,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Crear",
       cancelButtonText: "Cancelar",
-
       preConfirm: () => {
-        return {
-          nombre: (document.getElementById("swal-nombre")! as HTMLInputElement).value.trim(),
-          acronimo: (document.getElementById("swal-acronimo")! as HTMLInputElement).value.trim(),
-          descripcion: (document.getElementById("swal-descripcion")! as HTMLInputElement).value.trim(),
-          tiempoSprint: (document.getElementById("swal-tiempoSprint")! as HTMLInputElement).value,
-          nroSprints: (document.getElementById("swal-nroSprints")! as HTMLInputElement).value,
-          fechaInicio: (document.getElementById("swal-fechaInicio")! as HTMLInputElement).value,
-          fechaFin: (document.getElementById("swal-fechaFin")! as HTMLInputElement).value
+        // Leer valores
+        const nombre = (document.getElementById("swal-nombre") as HTMLInputElement).value.trim();
+        const acronimo = (document.getElementById("swal-acronimo") as HTMLInputElement).value.trim();
+        const descripcion = (document.getElementById("swal-descripcion") as HTMLInputElement).value.trim();
+        const tiempoSprint = parseInt((document.getElementById("swal-tiempoSprint") as HTMLInputElement).value);
+        const nroSprints = parseInt((document.getElementById("swal-nroSprints") as HTMLInputElement).value);
+        const fechaInicio = (document.getElementById("swal-fechaInicio") as HTMLInputElement).value;
+        const fechaFin = (document.getElementById("swal-fechaFin") as HTMLInputElement).value;
+        const coberturaMin = parseInt((document.getElementById("swal-coberturaPruebasMinima") as HTMLInputElement).value);
 
-        };
+        // Validaciones
+        if (!nombre) return Swal.showValidationMessage("El nombre del proyecto es obligatorio");
+        if (!descripcion) return Swal.showValidationMessage("La descripción es obligatoria");
+        if (!fechaInicio) return Swal.showValidationMessage("La fecha de inicio es obligatoria");
+        if (!fechaFin) return Swal.showValidationMessage("La fecha fin es obligatoria");
+        if (!/^[a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑ.,-]{3,100}$/.test(nombre)) return Swal.showValidationMessage("El nombre contiene caracteres inválidos");
+        if (acronimo && !/^[a-zA-Z0-9]{2,10}$/.test(acronimo)) return Swal.showValidationMessage("El acrónimo debe ser alfanumérico y de 2 a 10 caracteres");
+        if (isNaN(tiempoSprint) || tiempoSprint <= 0) return Swal.showValidationMessage("El tiempo del sprint debe ser un número positivo");
+        if (isNaN(nroSprints) || nroSprints <= 0) return Swal.showValidationMessage("La cantidad de sprints debe ser un número positivo");
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        if (new Date(fechaInicio) < hoy) return Swal.showValidationMessage("La fecha de inicio no puede ser anterior a hoy");
+        if (new Date(fechaFin) < hoy) return Swal.showValidationMessage("La fecha fin no puede ser anterior a hoy");
+        if (new Date(fechaFin) < new Date(fechaInicio)) return Swal.showValidationMessage("La fecha fin no puede ser menor que la fecha de inicio");
+
+        // Si pasa todo, retornar valores
+        return { nombre, acronimo: acronimo || undefined, descripcion, tiempoSprint, nroSprints, fechaInicio, fechaFin, coberturaPruebasMinima: isNaN(coberturaMin) ? undefined : coberturaMin };
       }
     });
 
-
-    if (!formValues) return;
-
-    // ---------------- VALIDACIONES ----------------
-
-    const {
-      nombre,
-      acronimo,
-      descripcion,
-      tiempoSprint,
-      nroSprints,
-      fechaInicio,
-      fechaFin
-    } = formValues;
-
-    // Validar campos obligatorios
-    if (!nombre) return Swal.fire("Error", "El nombre del proyecto es obligatorio", "error");
-    if (!descripcion) return Swal.fire("Error", "La descripción es obligatoria", "error");
-    if (!fechaInicio) return Swal.fire("Error", "La fecha de inicio es obligatoria", "error");
-    if (!fechaFin) return Swal.fire("Error", "La fecha fin es obligatoria", "error");
-
-    // Validar formato de texto (solo letras, números y espacios)
-    const regexTexto = /^[a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑ.,-]{3,100}$/;
-
-    if (!regexTexto.test(nombre))
-      return Swal.fire("Error", "El nombre contiene caracteres inválidos", "error");
-
-    if (acronimo && !/^[a-zA-Z0-9]{2,10}$/.test(acronimo))
-      return Swal.fire("Error", "El acrónimo debe ser alfanumérico y de 2 a 10 caracteres", "error");
-
-    // Validar números
-    const sprintDur = Number(tiempoSprint);
-    const sprintNum = Number(nroSprints);
-
-    if (isNaN(sprintDur) || sprintDur <= 0)
-      return Swal.fire("Error", "El tiempo del sprint debe ser un número positivo", "error");
-
-    if (isNaN(sprintNum) || sprintNum <= 0)
-      return Swal.fire("Error", "La cantidad de sprints debe ser un número positivo", "error");
-
-    // Validar fechas
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    // Fecha inicio ≥ hoy
-    if (new Date(fechaInicio) < hoy)
-      return Swal.fire("Error", "La fecha de inicio no puede ser anterior a hoy", "error");
-
-    if (new Date(fechaFin) < hoy)
-      return Swal.fire("Error", "La fecha fin no puede ser anterior a hoy", "error");
-
-    if (new Date(fechaFin) < new Date(fechaInicio))
-      return Swal.fire("Error", "La fecha fin no puede ser menor que la fecha de inicio", "error");
-
-
-    // ---------------- SEND TO BACKEND ----------------
-
-    const dataToSend = {
-      nombre,
-      acronimo,
-      descripcion,
-      tiempoSprint: sprintDur,
-      nroSprints: sprintNum,
-      fechaInicio,
-      fechaFin,
-      externalCuenta: cuentaID
-    };
+    if (!formValues) return; // si canceló, sale
 
     try {
-      await POST("/api/proyecto/registrar", dataToSend, token);
-
-      Swal.fire("Creado", `El proyecto "${nombre}" ha sido creado.`, "success")
-        .then(() => {
-          fetchData();   // Recarga la lista automáticamente
-        });
-
+      const response = await POST("/api/proyecto/registrar", { ...formValues, externalCuenta: cuentaID }, token);
+      Swal.fire("Registro Creado", response.msg, "success");
+      fetchData(); // refrescar lista
     } catch (error) {
       console.error(error);
-      Swal.fire("Error", "No se pudo crear el proyecto", "error");
+      Swal.fire("Error", "No se pudo registrar el proyecto", "error");
     }
   };
 
@@ -411,13 +341,13 @@ export default function MisProyectos() {
                 >
                   <div>
                     <div className="flex justify-between items-start mb-2">
-                      <div className={`text-xs font-semibold px-2 py-1 rounded-full border ${project.colaboradors[0]?.rol.nombre === 'PRODUCT_OWNER'}
+                      <div className={`text-xs font-semibold px-2 py-1 rounded-full border ${project.colaboradors![0]?.rol.nombre === 'SCRUM_MASTER'}
                         ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
                         : 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
                         }`}>
-                        {project.colaboradors[0].rol.nombre === 'PRODUCT_OWNER' ? 'Dueño' : 'Miembro'}
+                        {project.colaboradors![0].rol.nombre === 'SCRUM_MASTER' ? 'Dueño' : 'Miembro'}
                       </div>
-                      <span className="text-xs text-muted-foreground">{new Date(project.fechaInicio).toLocaleDateString()}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(project.fechaInicio!).toLocaleDateString()}</span>
                     </div>
 
                     <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-blue-600 transition-colors">

@@ -85,6 +85,7 @@ class ProyectoController {
             }
 
             const proyectos = await Proyecto.findAll({
+                where: { estaActivo: true }, // <-- solo proyectos activos
                 include: [
                     {
                         model: Colaborador,
@@ -129,38 +130,31 @@ class ProyectoController {
             nroSprints,
             fechaInicio,
             fechaFin,
+            objetivosCalidad,
+            definicionDone,
+            criteriosEntradaQA,
+            coberturaPruebasMinima,
             externalCuenta
         } = req.body;
 
         const t = await db.sequelize.transaction();
 
         try {
-            // A) Buscar el rol PRODUCT_OWNER
-            const rolPO = await db.rol.findOne({
-                where: { nombre: "PRODUCT_OWNER" }
-            });
-
+            // Buscar rol PRODUCT_OWNER
+            const rolPO = await db.rol.findOne({ where: { nombre: "SCRUM_MASTER" } });
             if (!rolPO) {
                 await t.rollback();
-                return res.status(400).json({
-                    msg: "No existe el rol PRODUCT_OWNER en la BD",
-                    code: 400
-                });
+                return res.status(400).json({ msg: "No existe el rol SCRUM_MASTER", code: 400 });
             }
 
-            const cuenta = await db.cuenta.findOne({
-                where: { external: externalCuenta }
-            });
-
+            // Buscar cuenta del usuario
+            const cuenta = await db.cuenta.findOne({ where: { external: externalCuenta } });
             if (!cuenta) {
                 await t.rollback();
-                return res.status(400).json({
-                    msg: "No se encontró la cuenta del usuario",
-                    code: 400
-                });
+                return res.status(400).json({ msg: "No se encontró la cuenta del usuario", code: 400 });
             }
 
-            // B) Crear el proyecto según el modelo
+            // Crear proyecto pendiente de aprobación
             const nuevoProyecto = await db.proyecto.create({
                 nombre,
                 acronimo: acronimo || null,
@@ -169,28 +163,30 @@ class ProyectoController {
                 nroSprints: nroSprints || null,
                 fechaInicio: fechaInicio || null,
                 fechaFin: fechaFin || null,
-                estado: "En Planificación",     // default
-                estaActivo: true                 // default
+                objetivosCalidad: objetivosCalidad || null,
+                definicionDone: definicionDone || null,
+                criteriosEntradaQA: criteriosEntradaQA || null,
+                coberturaPruebasMinima: coberturaPruebasMinima || null,
+                estado: "En Planificación",
+                estaActivo: false // proyecto no activo hasta aprobación
             }, { transaction: t });
 
-            // C) Crear registro en RequisitoMaster
-            await db.requisitomaster.create({
-                idProyecto: nuevoProyecto.id
-            }, { transaction: t });
+            // Crear registro en RequisitoMaster
+            await db.requisitomaster.create({ idProyecto: nuevoProyecto.id }, { transaction: t });
 
-            // D) Asignar el usuario como Product Owner
+            // Asignar al usuario como Scrum master
             await db.colaborador.create({
                 proyectoId: nuevoProyecto.id,
                 cuentaID: cuenta.id,
                 rolID: rolPO.id,
                 fechaAsignacion: new Date(),
-                estado: true
+                estado: false
             }, { transaction: t });
 
             await t.commit();
 
             return res.status(201).json({
-                msg: "Proyecto creado correctamente",
+                msg: "Proyecto solicitado correctamente. Pendiente de aprobación",
                 code: 201,
                 proyecto: nuevoProyecto
             });
@@ -198,14 +194,14 @@ class ProyectoController {
         } catch (error) {
             await t.rollback();
             console.error(error);
-
             return res.status(500).json({
-                msg: "Error al crear el proyecto",
+                msg: "Error al solicitar el proyecto",
                 code: 500,
                 error: error.message
             });
         }
     }
+
 }
 
 module.exports = new ProyectoController();
