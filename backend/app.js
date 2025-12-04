@@ -25,7 +25,7 @@ app.use('/api/rol', rolRouter);
 app.use('/api/version', versionRouter);
 app.use('/api/proyecto',proyectoRouter);
 
-db.sequelize.sync({ alter: true })
+db.sequelize.sync({ alter: false })
   .then(() => {
     console.log('Base de datos sincronizada');
   })
