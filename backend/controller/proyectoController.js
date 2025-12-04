@@ -108,13 +108,11 @@ class ProyectoController {
       });
     } catch (error) {
       console.error(error);
-      return res
-        .status(500)
-        .json({
-          code: 500,
-          msg: "Error al listar proyectos por cuenta",
-          data: [],
-        });
+      return res.status(500).json({
+        code: 500,
+        msg: "Error al listar proyectos por cuenta",
+        data: [],
+      });
     }
   }
 
@@ -243,9 +241,10 @@ class ProyectoController {
           "coberturaPruebasMinima",
           "estaActivo",
           "external",
-        ],where: {
-         estaActivo: false
-      },
+        ],
+        where: {
+          estaActivo: false,
+        },
         include: [
           {
             model: RequisitoMaster,
@@ -297,7 +296,6 @@ class ProyectoController {
       });
     }
   }
-
 
   async listarProyectosAprobados(req, res) {
     try {
@@ -317,9 +315,10 @@ class ProyectoController {
           "coberturaPruebasMinima",
           "estaActivo",
           "external",
-        ],where: {
-         estaActivo: true
-      },
+        ],
+        where: {
+          estaActivo: true,
+        },
         include: [
           {
             model: RequisitoMaster,
@@ -372,17 +371,19 @@ class ProyectoController {
     }
   }
 
-  
   async cambioEstado(req, res) {
-    const  external  = req.params.external;
-        console.log("aaaaaaaaaaaaa");
+    const external = req.params.external;
+    console.log("aaaaaaaaaaaaa");
 
     console.log(req.params.external);
     try {
       const proyecto = await Proyecto.findOne({
         where: { external: external },
       });
-      const colaborador = await Colaborador.findOne({where:{proyectoId :proyecto.id}});
+      const colaborador = await Colaborador.findOne({
+        where: { proyectoId: proyecto.id },
+      });
+      console.log(colaborador);
       if (!proyecto) {
         return res.status(404).json({
           msg: "Proyecto no encontrado",
@@ -396,22 +397,21 @@ class ProyectoController {
 
       proyecto.estaActivo = true;
       colaborador.estado = true;
-      
+
       await proyecto.save();
+      await colaborador.save();
+
       return res.status(200).json({
-        code:200,
+        code: 200,
         msg: "Estado de proyecto actualizado",
       });
     } catch (error) {
       return res.status(500).json({
         msg: "Error al actualizar estado",
-        error
-      });
-    }
+        error,
+      });
+    }
   }
-
-  
-
 }
 
 module.exports = new ProyectoController();
