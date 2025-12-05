@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Users, FolderGit2, ArrowRight, LayoutGrid, List } from "lucide-react"; // Nuevos iconos
+import { Search, Plus, Users, FolderGit2, ArrowRight, LayoutGrid, List } from "lucide-react"; 
 import ThemeToggle from "@/components/ThemeToggle";
 import SidebarUser from "@/components/SidebarUser";
 import Cookies from "js-cookie";
@@ -18,21 +18,34 @@ interface ColaboradorType {
   estado: boolean;
   external: string;
   rol: {
-    nombre: "PRODUCT_OWNER" | "Member";
+    nombre: "PRODUCT_OWNER" | "Member" | "SCRUM_MASTER";
   };
 }
 
 interface ProjectType {
+  // Datos Generales
   nombre: string;
   acronimo?: string;
   descripcion: string;
+  
+  // Cronograma
   tiempoSprint: number;
   nroSprints: number;
   fechaInicio: string;
   fechaFin: string;
+  
+  // Estado
   estado: string;
   estaActivo: boolean;
   external: string;
+  
+  // Calidad (Datos agregados del formato anterior)
+  objetivosCalidad?: string;
+  definicionDone?: string;
+  criteriosEntradaQA?: string;
+  coberturaPruebasMinima?: number;
+
+  // Relaciones
   colaboradors: ColaboradorType[];
   requisitomasters: any[];
 }
@@ -41,7 +54,6 @@ export default function MisProyectos() {
   const [data, setData] = useState<ProjectType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  // NUEVO: Estado para controlar la vista (grid o list)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const router = useRouter();
 
@@ -81,7 +93,7 @@ export default function MisProyectos() {
   }, []);
 
   // --------------------------------------------------
-  // Crear Nuevo Proyecto
+  // Crear Nuevo Proyecto (FUSIONADO)
   // --------------------------------------------------
   const handleCreateProject = async () => {
     const token = Cookies.get("token");
@@ -90,14 +102,17 @@ export default function MisProyectos() {
     const cuentaID = sessionStorage.getItem("external_cuenta");
     if (!cuentaID) return Swal.fire("Error", "No se encontró la cuenta del usuario", "error");
 
+    // Estilos reutilizables para el modal
     const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 bg-white placeholder-gray-400";
     const labelClass = "block text-left text-sm font-semibold text-gray-700 mb-1";
+    const textAreaClass = `${inputClass} resize-y min-h-[60px]`;
 
     const { value: formValues } = await Swal.fire({
       title: '<h2 class="text-xl font-bold text-gray-800">Crear Nuevo Proyecto</h2>',
-      width: '600px',
+      width: '750px', // Aumentado un poco el ancho para acomodar más campos
       html: `
-        <div class="flex flex-col gap-4 mt-2 text-left">
+        <div class="flex flex-col gap-3 mt-2 text-left max-h-[70vh] overflow-y-auto px-1">
+          
           <div class="grid grid-cols-4 gap-4">
             <div class="col-span-3">
               <label class="${labelClass}">Nombre del Proyecto <span class="text-red-500">*</span></label>
@@ -108,11 +123,14 @@ export default function MisProyectos() {
               <input id="swal-acronimo" class="${inputClass}" placeholder="Ej: SGRA">
             </div>
           </div>
+          
           <div>
             <label class="${labelClass}">Descripción <span class="text-red-500">*</span></label>
-            <textarea id="swal-descripcion" class="${inputClass}" rows="2" placeholder="Describe brevemente..."></textarea>
+            <textarea id="swal-descripcion" class="${textAreaClass}" rows="2" placeholder="Describe brevemente..."></textarea>
           </div>
+
           <hr class="border-gray-200 my-1"/>
+
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="${labelClass}">Duración Sprint (días)</label>
@@ -133,6 +151,31 @@ export default function MisProyectos() {
               <input id="swal-fechaFin" type="date" class="${inputClass}">
             </div>
           </div>
+
+          <hr class="border-gray-200 my-1"/>
+          <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide">Parámetros de Calidad</h3>
+
+          <div>
+            <label class="${labelClass}">Objetivos de Calidad</label>
+            <textarea id="swal-objetivosCalidad" class="${textAreaClass}" placeholder="Objetivos de calidad del proyecto"></textarea>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+             <div>
+              <label class="${labelClass}">Definición de Done</label>
+              <textarea id="swal-definicionDone" class="${textAreaClass}" placeholder="Criterios de finalización"></textarea>
+            </div>
+            <div>
+              <label class="${labelClass}">Criterios de Entrada QA</label>
+              <textarea id="swal-criteriosEntradaQA" class="${textAreaClass}" placeholder="Criterios para QA"></textarea>
+            </div>
+          </div>
+
+          <div>
+            <label class="${labelClass}">Cobertura de Pruebas Mínima (%)</label>
+            <input id="swal-coberturaPruebasMinima" type="number" class="${inputClass}" placeholder="80">
+          </div>
+
         </div>
       `,
       showCancelButton: true,
@@ -141,14 +184,33 @@ export default function MisProyectos() {
       confirmButtonColor: '#2563EB',
       focusConfirm: false,
       preConfirm: () => {
+        // Recolección de valores
+        const nombre = (document.getElementById("swal-nombre")! as HTMLInputElement).value.trim();
+        const acronimo = (document.getElementById("swal-acronimo")! as HTMLInputElement).value.trim();
+        const descripcion = (document.getElementById("swal-descripcion")! as HTMLInputElement).value.trim();
+        const tiempoSprint = (document.getElementById("swal-tiempoSprint")! as HTMLInputElement).value;
+        const nroSprints = (document.getElementById("swal-nroSprints")! as HTMLInputElement).value;
+        const fechaInicio = (document.getElementById("swal-fechaInicio")! as HTMLInputElement).value;
+        const fechaFin = (document.getElementById("swal-fechaFin")! as HTMLInputElement).value;
+        
+        // Nuevos campos
+        const objetivosCalidad = (document.getElementById("swal-objetivosCalidad")! as HTMLTextAreaElement).value.trim();
+        const definicionDone = (document.getElementById("swal-definicionDone")! as HTMLTextAreaElement).value.trim();
+        const criteriosEntradaQA = (document.getElementById("swal-criteriosEntradaQA")! as HTMLTextAreaElement).value.trim();
+        const coberturaPruebasMinima = (document.getElementById("swal-coberturaPruebasMinima")! as HTMLInputElement).value;
+
         return {
-          nombre: (document.getElementById("swal-nombre")! as HTMLInputElement).value.trim(),
-          acronimo: (document.getElementById("swal-acronimo")! as HTMLInputElement).value.trim(),
-          descripcion: (document.getElementById("swal-descripcion")! as HTMLInputElement).value.trim(),
-          tiempoSprint: (document.getElementById("swal-tiempoSprint")! as HTMLInputElement).value,
-          nroSprints: (document.getElementById("swal-nroSprints")! as HTMLInputElement).value,
-          fechaInicio: (document.getElementById("swal-fechaInicio")! as HTMLInputElement).value,
-          fechaFin: (document.getElementById("swal-fechaFin")! as HTMLInputElement).value
+          nombre,
+          acronimo,
+          descripcion,
+          tiempoSprint,
+          nroSprints,
+          fechaInicio,
+          fechaFin,
+          objetivosCalidad,
+          definicionDone,
+          criteriosEntradaQA,
+          coberturaPruebasMinima
         };
       }
     });
@@ -156,16 +218,20 @@ export default function MisProyectos() {
     if (!formValues) return;
 
     // --- VALIDACIONES ---
-    const { nombre, acronimo, descripcion, tiempoSprint, nroSprints, fechaInicio, fechaFin } = formValues;
+    const { 
+      nombre, acronimo, descripcion, tiempoSprint, nroSprints, fechaInicio, fechaFin,
+      objetivosCalidad, definicionDone, criteriosEntradaQA, coberturaPruebasMinima 
+    } = formValues;
 
     if (!nombre || !descripcion || !fechaInicio || !fechaFin) 
       return Swal.fire("Atención", "Todos los campos marcados con * son obligatorios", "warning");
 
     const sprintDur = Number(tiempoSprint);
     const sprintNum = Number(nroSprints);
+    const coberturaMin = Number(coberturaPruebasMinima);
 
     if (isNaN(sprintDur) || sprintDur <= 0 || isNaN(sprintNum) || sprintNum <= 0) 
-      return Swal.fire("Error", "Los valores numéricos deben ser positivos", "warning");
+      return Swal.fire("Error", "Los valores de sprint deben ser positivos", "warning");
 
     const fechaInicioDate = new Date(fechaInicio);
     const fechaFinDate = new Date(fechaFin);
@@ -175,53 +241,45 @@ export default function MisProyectos() {
     // --- ENVÍO AL BACKEND ---
     const dataToSend = {
       nombre,
-      acronimo,
+      acronimo: acronimo || undefined,
       descripcion,
       tiempoSprint: sprintDur,
       nroSprints: sprintNum,
       fechaInicio,
       fechaFin,
+      // Mapeo de campos extra
+      objetivosCalidad: objetivosCalidad || undefined,
+      definicionDone: definicionDone || undefined,
+      criteriosEntradaQA: criteriosEntradaQA || undefined,
+      coberturaPruebasMinima: isNaN(coberturaMin) ? undefined : coberturaMin,
       externalCuenta: cuentaID
     };
 
     try {
-      // Llamada al endpoint
       const response = await POST("/api/proyecto/registrar", dataToSend, token);
       
-      console.log("Respuesta Backend:", response); // Para depuración
+      console.log("Respuesta Backend:", response);
 
-      // 1. Verificar si el backend devuelve un código de éxito explícito (200)
-      if (response && (response.code === 200 || response.data?.code === 200)) {
-        
+      if (response && (response.code === 201 || response.data?.code === 201)) {
         Swal.fire({
           title: "¡Creado!",
-          text: `El proyecto "${nombre}" ha sido creado correctamente.`,
+          text: `El proyecto "${nombre}" ha sido creado correctamente, pendiente de aprobación.`,
           icon: "success",
           timer: 2000,
           showConfirmButton: false
         });
-
-        // REQUISITO: Cambiar automáticamente a vista de lista
-        setViewMode("list");
+        setViewMode("list"); // Cambiar a vista de lista
         fetchData();
-
       } else {
-        // 2. Si llega aquí, el backend respondió (HTTP 200 o similar) pero con lógica de error
         const errorMsg = response.msg || response.data?.msg || "Error desconocido al crear el proyecto";
         Swal.fire("Error", errorMsg, "error");
       }
-
     } catch (error: any) {
-      // 3. Capturar errores de red o HTTP 400/500 lanzados por Axios
       console.error("Error completo:", error);
-      
       let mensajeMostrar = "No se pudo conectar con el servidor";
-      
-      // Intentamos extraer el mensaje que envía el backend en caso de error 400
       if (error.response && error.response.data) {
           mensajeMostrar = error.response.data.msg || error.response.data.message || JSON.stringify(error.response.data);
       }
-
       Swal.fire("Error al crear", mensajeMostrar, "error");
     }
   };
@@ -240,7 +298,7 @@ export default function MisProyectos() {
       confirmButtonText: 'Unirse',
       confirmButtonColor: '#2563EB'
     });
-    // Lógica pendiente...
+    
     if(codigo) Swal.fire("Info", "Funcionalidad pendiente de conectar", "info");
   };
 
@@ -254,13 +312,18 @@ export default function MisProyectos() {
 
   const getRolUsuario = (proyecto: ProjectType) => {
     if (proyecto.colaboradors && proyecto.colaboradors.length > 0) {
-      return proyecto.colaboradors[0].rol.nombre === 'PRODUCT_OWNER' ? 'Dueño' : 'Miembro';
+      // Ajustado para manejar roles más genéricos o específicos si es necesario
+      const rol = proyecto.colaboradors[0].rol.nombre;
+      if (rol === 'PRODUCT_OWNER' || rol === 'SCRUM_MASTER') return 'Dueño';
+      return 'Miembro';
     }
     return 'Miembro';
   };
 
   const isOwner = (proyecto: ProjectType) => {
-    return proyecto.colaboradors && proyecto.colaboradors.length > 0 && proyecto.colaboradors[0].rol.nombre === 'PRODUCT_OWNER';
+    if (!proyecto.colaboradors || proyecto.colaboradors.length === 0) return false;
+    const rol = proyecto.colaboradors[0].rol.nombre;
+    return rol === 'PRODUCT_OWNER' || rol === 'SCRUM_MASTER';
   };
 
   return (
@@ -326,9 +389,7 @@ export default function MisProyectos() {
 
               {/* Botones */}
               <div className="flex gap-2 w-full sm:w-auto">
-                <button onClick={handleJoinProject} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-background border border-input rounded-md hover:bg-muted transition-colors">
-                  <Users size={16} /> Unirse
-                </button>
+                
                 <button onClick={handleCreateProject} className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
                   <Plus size={16} /> Nuevo
                 </button>
@@ -413,7 +474,7 @@ export default function MisProyectos() {
                                             {project.nroSprints} <span className="text-xs text-muted-foreground">({project.tiempoSprint}d)</span>
                                         </td>
                                         <td className="px-4 py-3">
-                                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
                                                 isOwner(project) 
                                                 ? 'bg-purple-100 text-purple-700 border-purple-200' 
                                                 : 'bg-blue-100 text-blue-700 border-blue-200'

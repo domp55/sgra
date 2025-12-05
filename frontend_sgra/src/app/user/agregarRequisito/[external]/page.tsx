@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2"; 
 
-import Sidebar from "@/components/SidebarUser";
+import Sidebar from "@/components/SidebarProyecto";
+import ThemeToggle from "@/components/ThemeToggle"; // <--- IMPORTADO
 // Verifica que estas rutas sean las correctas en tu proyecto
 import { proyecto } from "@/hooks/ServiceProyecto";
 import { registrarRequisito } from "@/hooks/ServiceReq";
@@ -54,7 +55,6 @@ export default function AgregarRequisitoPage({
     const fetchProject = async () => {
       try {
         const token = sessionStorage.getItem("token") || "";
-        // Usamos el external de la URL
         const response = await proyecto(external, token);
 
         if (response.code === 200 && response.data) {
@@ -76,14 +76,13 @@ export default function AgregarRequisitoPage({
   }, [external]);
 
   // --------------------------------------------
-  // 2. Manejar el Envío (LOGICA CORREGIDA)
+  // 2. Manejar el Envío
   // --------------------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSaving(true);
 
-    // Validación de seguridad
     if (!projectData?.external) {
       setError("Error: No se identificó el ID externo del proyecto.");
       setSaving(false);
@@ -93,7 +92,6 @@ export default function AgregarRequisitoPage({
     try {
       const token = sessionStorage.getItem("token") || "";
 
-      // Datos a enviar (Usando External)
       const dataToSend = {
         externalProyecto: projectData.external, 
         nombre: nombre.trim(),
@@ -102,40 +100,38 @@ export default function AgregarRequisitoPage({
         tipo,
       };
 
-      console.log("Enviando datos:", dataToSend); // Para depuración
+      console.log("Enviando datos:", dataToSend); 
 
-      // Llamada al servicio
       const response = await registrarRequisito(dataToSend, token);
       
-      console.log("Respuesta recibida en Componente:", response); // Verificación final
+      console.log("Respuesta recibida en Componente:", response);
 
-      // --- CONDICIÓN CORREGIDA ---
-      // Aceptamos el éxito si:
-      // 1. Existe 'response.requisito' (el objeto creado)
-      // 2. O el mensaje es exactamente el esperado
       const esExitoso = response && (response.requisito || response.msg === "Requisito registrado exitosamente");
 
       if (esExitoso) {
-        // Mensaje de éxito
         Swal.fire({
           title: "¡Requisito Guardado!",
           text: "El requisito se ha registrado correctamente en el proyecto.",
           icon: "success",
           confirmButtonText: "Aceptar",
           timer: 2000,
+          customClass: {
+            popup: 'dark:bg-zinc-900 dark:text-white', // Adaptar Swal al tema
+          }
         }).then(() => {
-          // Redireccionar
           router.push(`/user/agregarRequisito/${external}`);
         });
 
       } else {
-        // Manejo de error del backend
         const msg = response?.msg || "No se pudo guardar el requisito. Respuesta inesperada.";
         setError(msg);
         Swal.fire({
           icon: "error",
           title: "Error",
           text: msg,
+          customClass: {
+            popup: 'dark:bg-zinc-900 dark:text-white',
+          }
         });
       }
 
@@ -151,7 +147,7 @@ export default function AgregarRequisitoPage({
   // RENDER
   // --------------------------------------------
   return (
-    <div className="flex h-screen w-full bg-gray-50 dark:bg-zinc-950 text-foreground overflow-hidden">
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
@@ -159,39 +155,45 @@ export default function AgregarRequisitoPage({
           
           {/* HEADER */}
           <div className="mb-8">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4"
-            >
-              <ArrowLeft size={16} className="mr-2" />
-              Volver al proyecto
-            </button>
+            {/* Fila superior: Botón Volver y Theme Toggle */}
+            <div className="flex justify-between items-center mb-4">
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                    <ArrowLeft size={16} className="mr-2" />
+                    Volver al proyecto
+                </button>
+                
+                {/* AQUI ESTA EL TOGGLE */}
+                <ThemeToggle />
+            </div>
 
             {loadingProject ? (
               <div className="space-y-2">
-                 <div className="h-6 w-20 bg-gray-200 dark:bg-zinc-800 animate-pulse rounded"></div>
-                 <div className="h-8 w-64 bg-gray-200 dark:bg-zinc-800 animate-pulse rounded"></div>
+                 <div className="h-6 w-20 bg-muted animate-pulse rounded"></div>
+                 <div className="h-8 w-64 bg-muted animate-pulse rounded"></div>
               </div>
             ) : (
               <div>
-                 <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800 mb-2 inline-block">
+                 <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800 mb-2 inline-block">
                     {projectData?.acronimo || "PROYECTO"}
                  </span>
-                 <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                 <h1 className="text-3xl font-bold tracking-tight text-foreground">
                     Nuevo Requisito
                  </h1>
-                 <p className="text-gray-500 dark:text-gray-400">
-                    Agregando al proyecto: <span className="font-semibold text-gray-700 dark:text-gray-300">{projectData?.nombre}</span>
+                 <p className="text-muted-foreground">
+                    Agregando al proyecto: <span className="font-semibold text-foreground">{projectData?.nombre}</span>
                  </p>
               </div>
             )}
           </div>
 
           {/* FORMULARIO */}
-          <div className="bg-white dark:bg-card border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6 md:p-8">
+          <div className="bg-card border border-border rounded-xl shadow-sm p-6 md:p-8">
             
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-3">
+                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 rounded-lg flex items-center gap-3">
                     <AlertCircle size={20} />
                     <p className="text-sm font-medium">{error}</p>
                 </div>
@@ -202,14 +204,14 @@ export default function AgregarRequisitoPage({
                     
                     {/* NOMBRE */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none flex items-center gap-2">
+                        <label className="text-sm font-medium leading-none flex items-center gap-2 text-foreground">
                             <FileText size={16} className="text-blue-600" />
                             Nombre del Requisito <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             placeholder="Ej. Login de Usuarios"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             value={nombre}
                             onChange={(e) => setNombre(e.target.value)}
                             required
@@ -219,12 +221,12 @@ export default function AgregarRequisitoPage({
                     {/* TIPO Y PRIORIDAD */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none flex items-center gap-2">
+                            <label className="text-sm font-medium leading-none flex items-center gap-2 text-foreground">
                                 <Layers size={16} className="text-purple-600" />
                                 Tipo de Requisito
                             </label>
                             <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
                                 value={tipo}
                                 onChange={(e) => setTipo(e.target.value)}
                             >
@@ -234,7 +236,7 @@ export default function AgregarRequisitoPage({
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium leading-none flex items-center gap-2">
+                            <label className="text-sm font-medium leading-none flex items-center gap-2 text-foreground">
                                 <AlertTriangle size={16} className={
                                     prioridad === "Alta" ? "text-red-500" : 
                                     prioridad === "Media" ? "text-orange-500" : "text-green-500"
@@ -242,7 +244,7 @@ export default function AgregarRequisitoPage({
                                 Prioridad
                             </label>
                             <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
                                 value={prioridad}
                                 onChange={(e) => setPrioridad(e.target.value)}
                             >
@@ -255,12 +257,12 @@ export default function AgregarRequisitoPage({
 
                     {/* DESCRIPCIÓN */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none flex items-center gap-2">
-                            <Briefcase size={16} className="text-gray-500" />
+                        <label className="text-sm font-medium leading-none flex items-center gap-2 text-foreground">
+                            <Briefcase size={16} className="text-muted-foreground" />
                             Descripción Detallada <span className="text-red-500">*</span>
                         </label>
                         <textarea
-                            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 resize-y"
+                            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 resize-y"
                             placeholder="Describa qué debe hacer el sistema..."
                             value={descripcion}
                             onChange={(e) => setDescripcion(e.target.value)}
@@ -269,11 +271,11 @@ export default function AgregarRequisitoPage({
                     </div>
 
                     {/* BOTONES */}
-                    <div className="pt-4 flex items-center justify-end gap-4 border-t border-gray-100 dark:border-zinc-800">
+                    <div className="pt-4 flex items-center justify-end gap-4 border-t border-border">
                         <button
                             type="button"
                             onClick={() => router.back()}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="px-4 py-2 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-muted transition-colors"
                             disabled={saving}
                         >
                             Cancelar
