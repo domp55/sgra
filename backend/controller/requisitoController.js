@@ -161,6 +161,7 @@ class RequisitoController {
       return res.status(200).json({
         mensaje: `Requisito Maestro y sus ${numAffectedRows} versiones asociadas han sido eliminados lógicamente (estado = false).`,
         external: master.external,
+        code: 200,
       });
     } catch (error) {
       // 6. Si algo falla, revertir todos los cambios.

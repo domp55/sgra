@@ -13,12 +13,11 @@ import {
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
-import { useRouter, useParams } from "next/navigation"; // 1. Importamos useParams
+import { useRouter, useParams } from "next/navigation"; 
 import Swal from "sweetalert2";
 
-// Importa tu servicio
-// Asegúrate de actualizar tu servicio para que acepte (external, token)
-import { listarVersiones } from "@/hooks/ServiceVersiones"; 
+// Importamos ambas funciones del servicio
+import { listarVersiones, eliminarRequisito } from "@/hooks/ServiceVersiones"; 
 
 // --------------------------------------------------
 // Interfaces
@@ -50,25 +49,20 @@ export default function GestionRequisitos() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const router = useRouter();
-  const params = useParams(); // 2. Obtenemos los parámetros de la URL
-  // 'external' debe coincidir con el nombre de tu carpeta: [external]
+  const params = useParams(); 
   const externalProyecto = params?.external as string; 
 
   // --------------------------------------------------
-  // Cargar y Normalizar datos
+  // Cargar datos
   // --------------------------------------------------
   const fetchData = async () => {
     const token = sessionStorage.getItem("token");
     if (!token) return router.push("/");
 
-    // Validación de seguridad: si no hay external en la URL, no hacemos nada o redirigimos
     if (!externalProyecto) return;
 
     try {
       setLoading(true);
-      
-      // 3. Pasamos el external al servicio
-      // Nota: Debes actualizar tu archivo de servicio para recibir este parámetro
       const resultado = await listarVersiones(externalProyecto, token);
 
       if (resultado && resultado.requisitos) {
@@ -94,7 +88,69 @@ export default function GestionRequisitos() {
       fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalProyecto]); // Se ejecuta cuando el external está listo
+  }, [externalProyecto]);
+
+  // --------------------------------------------------
+  // Eliminar Requisito (NUEVO)
+  // --------------------------------------------------
+  const handleEliminar = async (externalMaster: string) => {
+    const token = sessionStorage.getItem("token");
+    if (!token) return router.push("/");
+
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      text: "Se eliminará el requisito actual y todo su historial de versiones. ¡No podrás revertir esto!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444", // Rojo Tailwind
+      cancelButtonColor: "#6b7280", // Gris Tailwind
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff', // Adapta modo oscuro si lo usas
+      color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        Swal.fire({
+          title: "Procesando...",
+          text: "Eliminando requisito",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+
+        const respuesta = await eliminarRequisito(externalMaster, token);
+
+        if (respuesta && respuesta.code === 200) {
+          // Éxito: Filtramos el estado local para remover el item
+          setData((prev) => prev.filter((item) => item.externalMaster !== externalMaster));
+          
+          Swal.fire({
+            title: "¡Eliminado!",
+            text: "El requisito ha sido eliminado correctamente.",
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          // Error controlado del backend
+          Swal.fire({
+            title: "Error",
+            text: respuesta?.msg || "No se pudo completar la eliminación.",
+            icon: "error",
+          });
+        }
+      } catch (error) {
+        // Error de red o código
+        console.error(error);
+        Swal.fire({
+          title: "Error",
+          text: "Ocurrió un error de conexión.",
+          icon: "error",
+        });
+      }
+    }
+  };
 
   const toggleRow = (externalMaster: string) => {
     const newExpanded = new Set(expandedRows);
@@ -253,9 +309,11 @@ export default function GestionRequisitos() {
                                   <Edit size={16} />
                                 </button>
                                 
+                                {/* BOTON ELIMINAR ACTUALIZADO */}
                                 <button 
                                   className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors dark:hover:bg-red-900/20"
                                   title="Eliminar Requisito"
+                                  onClick={() => handleEliminar(item.externalMaster)}
                                 >
                                   <Trash2 size={16} />
                                 </button>

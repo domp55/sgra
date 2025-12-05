@@ -15,3 +15,12 @@ export async function listarVersiones(external, token) {
   return datos.data;
 }
 
+export async function eliminarRequisito(external, token) {
+  let datos = null;
+  try {
+    datos = await PATCH("/api/version/eliminarRequisito/" + external, token);
+  } catch (error) {
+    return error;
+  }
+  return datos.data;
+}
