@@ -34,6 +34,10 @@ router.get(
     proController.listarProyectoColaborador
 );
 
+router.get(
+    '/listarProyecto/:external',
+    proController.listarProyecto
+);
 
 router.patch(
     '/cambiarEstado/:external',

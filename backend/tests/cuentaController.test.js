@@ -35,22 +35,22 @@ describe('CuentaController', () => {
   let req, res;
   let mockTransactionObj;
 
-  // Configuración previa a cada test
+
   beforeEach(() => {
-    // Resetear mocks de Request y Response
+    
     req = {
       body: {},
       params: {}
     };
     res = {
-      status: jest.fn().mockReturnThis(), // Permite encadenar .status().json()
+      status: jest.fn().mockReturnThis(), 
       json: jest.fn()
     };
 
-    // Resetear mocks de la BD y Bcrypt antes de cada prueba
+    
     jest.clearAllMocks();
 
-    // Configurar objeto de transacción simulado
+   
     mockTransactionObj = {
       commit: jest.fn(),
       rollback: jest.fn()

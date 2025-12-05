@@ -412,6 +412,84 @@ class ProyectoController {
       });
     }
   }
+
+  async listarProyecto(req, res) {
+
+
+    const  external = req.params.external;
+console.log(req.params.external);
+    try {
+      const proyectos = await Proyecto.findOne({
+        attributes: [
+          "nombre",
+          "acronimo",
+          "descripcion",
+          "fechaInicio",
+          "fechaFin",
+          "estado",
+          "tiempoSprint",
+          "nroSprints",
+          "objetivosCalidad",
+          "definicionDone",
+          "criteriosEntradaQA",
+          "coberturaPruebasMinima",
+          "estaActivo",
+          "external",
+        ],
+        where: {
+          external: external,
+        },
+        include: [
+          {
+            model: RequisitoMaster,
+            attributes: ["id", "external", "idProyecto"],
+          },
+          {
+            model: Colaborador,
+            attributes: [
+              "rolID",
+              "proyectoId",
+              "cuentaID",
+              "fechaAsignacion",
+              "estado",
+              "external",
+            ],
+            include: [
+              {
+                model: Rol,
+                attributes: ["nombre"],
+              },
+              // -------------------------------------------------
+              // <--- AQUÍ AGREGAS LA RELACIÓN CON EL MODELO CUENTA
+              // -------------------------------------------------
+              {
+                model: Cuenta,
+                attributes: ["correo", "external"],
+                include: [
+                  {
+                    model: Persona,
+                    attributes: ["nombre", "apellido"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      return res.status(200).json({
+        msg: "Proyecto encontrado",
+        code: 200,
+        data: proyectos,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        msg: "Error interno del servidor",
+        code: 500,
+      });
+    }
+  }
 }
 
 module.exports = new ProyectoController();
