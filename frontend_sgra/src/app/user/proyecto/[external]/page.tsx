@@ -226,18 +226,29 @@ export default function DetalleProyectoPage({
                 {/* Lado Derecho: Botones + Theme */}
                 <div className="flex flex-col items-end gap-3">
                   {/* BOTONES */}
-          <div className="flex gap-3">
-  <button 
-    className="px-4 py-2 bg-blue-300 text-white rounded-lg hover:bg-blue-400 transition shadow-md">
-    Agregar requisitos
-  </button>
+                  {/* BOTONES */}
+                  <div className="flex gap-3 flex-wrap">
+                    {/* --- NUEVO BOTÓN: VER LISTA (Redirección) --- */}
+                    <button
+                      onClick={() => router.push(`/user/proyecto/requisito/lista/${data.external}`)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md"
+                    >
+                      <FileText size={18} />
+                      Ver Requisitos
+                    </button>
 
-  <button 
-    className="px-4 py-2 bg-blue-300 text-white rounded-lg hover:bg-blue-400 transition shadow-md">
-    Agregar personas al equipo
-  </button>
-</div>
+                    {/* Botón Original 1 (Mantenido) */}
+                    <button
+                      className="px-4 py-2 bg-blue-300 text-white rounded-lg hover:bg-blue-400 transition shadow-md">
+                      Agregar requisitos
+                    </button>
 
+                    {/* Botón Original 2 (Mantenido) */}
+                    <button
+                      className="px-4 py-2 bg-blue-300 text-white rounded-lg hover:bg-blue-400 transition shadow-md">
+                      Agregar personas al equipo
+                    </button>
+                  </div>
 
                   {/* TEMA + OPCIONES */}
                   <div className="flex items-center gap-3">
