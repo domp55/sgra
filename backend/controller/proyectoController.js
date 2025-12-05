@@ -119,109 +119,129 @@ class ProyectoController {
   // =============================================
   // CREAR PROYECTO
   // =============================================
-  async guardarProyecto(req, res) {
+async guardarProyecto(req, res) {
+    console.log("--------------- INICIO GUARDAR PROYECTO ---------------");
+    
+    // 1. Verificar validaciones de entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        msg: "Datos faltantes o inválidos",
-        code: 400,
-        errors: errors.array(),
-      });
+        console.log("Error: Falló la validación inicial", errors.array());
+        return res.status(400).json({
+            msg: "Datos faltantes o inválidos",
+            code: 400,
+            errors: errors.array(),
+        });
     }
 
     const {
-      nombre,
-      acronimo,
-      descripcion,
-      tiempoSprint,
-      nroSprints,
-      fechaInicio,
-      fechaFin,
-      objetivosCalidad,
-      definicionDone,
-      criteriosEntradaQA,
-      coberturaPruebasMinima,
-      externalCuenta,
+        nombre, acronimo, descripcion, tiempoSprint, nroSprints,
+        fechaInicio, fechaFin, objetivosCalidad, definicionDone,
+        criteriosEntradaQA, coberturaPruebasMinima, externalCuenta,
     } = req.body;
 
+    // 2. Loguear datos recibidos (útil para ver si externalCuenta llega bien)
+    console.log("Datos recibidos (Body):", req.body);
+    console.log("External Cuenta recibido:", externalCuenta);
+
     const t = await db.sequelize.transaction();
+    console.log("--> Transacción iniciada");
 
     try {
-      // Buscar rol PRODUCT_OWNER
-      const rolPO = await db.rol.findOne({ where: { nombre: "SCRUM_MASTER" } });
-      if (!rolPO) {
-        await t.rollback();
-        return res
-          .status(400)
-          .json({ msg: "No existe el rol SCRUM_MASTER", code: 400 });
-      }
+        // 3. Buscar rol
+        console.log("--> Buscando rol SCRUM_MASTER...");
+        const rolPO = await db.rol.findOne({ where: { nombre: "SCRUM_MASTER" } });
+        
+        if (!rolPO) {
+            console.log("Error: No se encontró el rol SCRUM_MASTER en la BD");
+            await t.rollback();
+            return res.status(400).json({ msg: "No existe el rol SCRUM_MASTER", code: 400 });
+        }
+        console.log("--> Rol encontrado ID:", rolPO.id);
 
-      // Buscar cuenta del usuario
-      const cuenta = await db.cuenta.findOne({
-        where: { external: externalCuenta },
-      });
-      if (!cuenta) {
-        await t.rollback();
-        return res
-          .status(400)
-          .json({ msg: "No se encontró la cuenta del usuario", code: 400 });
-      }
+        // 4. Buscar cuenta
+        console.log(`--> Buscando cuenta con external: ${externalCuenta}...`);
+        const cuenta = await db.cuenta.findOne({
+            where: { external: externalCuenta },
+        });
 
-      // Crear proyecto pendiente de aprobación
-      const nuevoProyecto = await db.proyecto.create(
-        {
-          nombre,
-          acronimo: acronimo || null,
-          descripcion: descripcion || null,
-          tiempoSprint: tiempoSprint || null,
-          nroSprints: nroSprints || null,
-          fechaInicio: fechaInicio || null,
-          fechaFin: fechaFin || null,
-          objetivosCalidad: objetivosCalidad || null,
-          definicionDone: definicionDone || null,
-          criteriosEntradaQA: criteriosEntradaQA || null,
-          coberturaPruebasMinima: coberturaPruebasMinima || null,
-          estado: "En Planificación",
-          estaActivo: false, // proyecto no activo hasta aprobación
-        },
-        { transaction: t }
-      );
+        if (!cuenta) {
+            console.log("Error: No se encontró la cuenta asociada");
+            await t.rollback();
+            return res.status(400).json({ msg: "No se encontró la cuenta del usuario", code: 400 });
+        }
+        console.log("--> Cuenta encontrada ID:", cuenta.id);
 
-      // Crear registro en RequisitoMaster
-      await db.requisitomaster.create(
-        { idProyecto: nuevoProyecto.id },
-        { transaction: t }
-      );
+        // 5. Crear Proyecto
+        console.log("--> Intentando crear registro Proyecto...");
+        const nuevoProyecto = await db.proyecto.create(
+            {
+                nombre,
+                acronimo: acronimo || null,
+                descripcion: descripcion || null,
+                tiempoSprint: tiempoSprint || null,
+                nroSprints: nroSprints || null,
+                fechaInicio: fechaInicio || null,
+                fechaFin: fechaFin || null,
+                objetivosCalidad: objetivosCalidad || null,
+                definicionDone: definicionDone || null,
+                criteriosEntradaQA: criteriosEntradaQA || null,
+                coberturaPruebasMinima: coberturaPruebasMinima || null,
+                estado: "En Planificación",
+                estaActivo: false,
+            },
+            { transaction: t }
+        );
+        console.log("--> Proyecto creado ID:", nuevoProyecto.id);
 
-      // Asignar al usuario como Scrum master
-      await db.colaborador.create(
-        {
-          proyectoId: nuevoProyecto.id,
-          cuentaID: cuenta.id,
-          rolID: rolPO.id,
-          fechaAsignacion: new Date(),
-          estado: false,
-        },
-        { transaction: t }
-      );
+        // 6. Crear Requisito Master
+        console.log("--> Intentando crear RequisitoMaster...");
+        await db.requisitomaster.create(
+            { idProyecto: nuevoProyecto.id },
+            { transaction: t }
+        );
+        console.log("--> RequisitoMaster creado.");
 
-      await t.commit();
+        // 7. Crear Colaborador
+        console.log("--> Intentando crear Colaborador (Asignación)...");
+        // OJO AQUÍ: Verifica si tus columnas en BD son realmente 'cuentaID' o 'cuentaId' (camelCase)
+        await db.colaborador.create(
+            {
+                proyectoId: nuevoProyecto.id,
+                cuentaID: cuenta.id,  // <--- Posible error aquí (revisa mayúsculas/minúsculas)
+                rolID: rolPO.id,      // <--- Posible error aquí
+                fechaAsignacion: new Date(),
+                estado: false,
+            },
+            { transaction: t }
+        );
+        console.log("--> Colaborador creado.");
 
-      return res.status(201).json({
-        msg: "Proyecto solicitado correctamente. Pendiente de aprobación",
-        code: 201,
-        proyecto: nuevoProyecto,
-      });
+        await t.commit();
+        console.log("--------------- PROCESO TERMINADO CON ÉXITO ---------------");
+
+        return res.status(201).json({
+            msg: "Proyecto solicitado correctamente. Pendiente de aprobación",
+            code: 201,
+            proyecto: nuevoProyecto,
+        });
+
     } catch (error) {
-      await t.rollback();
-      console.error(error);
-      return res.status(500).json({
-        msg: "Error al solicitar el proyecto",
-        code: 500,
-        error: error.message,
-      });
+        await t.rollback();
+        console.error("--------------- ERROR CRÍTICO ---------------");
+        console.error("Mensaje:", error.message);
+        // Si es error de Sequelize, esto nos dirá qué campo falló
+        if (error.original) console.error("Error Original SQL:", error.original.sqlMessage);
+        if (error.errors) console.error("Detalle Validación:", JSON.stringify(error.errors, null, 2));
+        console.error("Stack:", error.stack);
+        console.error("---------------------------------------------");
+
+        return res.status(500).json({
+            msg: "Error al solicitar el proyecto",
+            code: 500,
+            error: error.message,
+        });
     }
-  }
+}
 
   async listarProyectoSinAprobar(req, res) {
     try {
@@ -373,7 +393,6 @@ class ProyectoController {
 
   async cambioEstado(req, res) {
     const external = req.params.external;
-    console.log("aaaaaaaaaaaaa");
 
     console.log(req.params.external);
     try {

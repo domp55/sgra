@@ -4,9 +4,9 @@ const rol = require("../controller/rolController");
 const authAdmin = require("../middleware/authAdmin");
 
 // Listar roles (solo admin)
-router.get("/listar", authAdmin, rol.listarroles);
+router.get("/listar", rol.listarroles);
 
 // Registrar rol (solo admin)
-router.post("/registrar", authAdmin, rol.registrarRol);
+router.post("/registrar", rol.registrarRol);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const loginRouter = require('./routes/loginRoutes');
 const rolRouter = require('./routes/rolRoutes');
 const versionRouter = require('./routes/versionRoutes');
 const proyectoRouter = require('./routes/proyectoRoutes');
+const requisitoRouter = require('./routes/requisitoRoutes');
 
 app.use(express.json());
 // Middleware para preflight CORS
@@ -24,6 +25,7 @@ app.use('/api/privado', loginRouter);
 app.use('/api/rol', rolRouter);
 app.use('/api/version', versionRouter);
 app.use('/api/proyecto',proyectoRouter);
+app.use('/api/requisito', requisitoRouter);
 
 db.sequelize.sync({ alter: false })
   .then(() => {

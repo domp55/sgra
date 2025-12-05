@@ -3,119 +3,115 @@ const RequisitoMaster = db.requisitomaster;
 const Version = db.version;
 const Proyecto = db.proyecto; // Para validación de FK
 
-class RequisitoMasterController {
+class requisitoController {
 
     // HU11: Registrar requisitos (Crea Master y la primera Versión)
-    registrarRequisito = async (req, res) => {
+    async registrarRequisito(req, res) {
         const t = await db.sequelize.transaction();
         try {
-            const { idProyecto, nombre, descripcion, prioridad, tipo } = req.body;
+            // AHORA RECIBIMOS 'externalProyecto' EN LUGAR DE 'idProyecto'
+            const { externalProyecto, nombre, descripcion, prioridad, tipo } = req.body;
+            
+            console.log("--> Solicitud nuevo requisito para proyecto external:", externalProyecto);
 
             // 1. Validaciones
-            if (!idProyecto || !nombre || !descripcion || !prioridad || !tipo) {
+            if (!externalProyecto || !nombre || !descripcion || !prioridad || !tipo) {
                 await t.rollback();
-                return res.status(400).json({ mensaje: "Faltan campos obligatorios para el requisito." });
+                return res.status(400).json({ msg: "Faltan campos obligatorios" });
             }
 
-            // 1.1. Validar que el Proyecto exista
-            const proyectoExiste = await Proyecto.findByPk(idProyecto);
-            if (!proyectoExiste) {
-                await t.rollback();
-                return res.status(404).json({ mensaje: `Proyecto con ID ${idProyecto} no encontrado.` });
-            }
+            // 2. BUSCAR EL PROYECTO POR SU EXTERNAL (UUID)
+            const proyectoEncontrado = await db.proyecto.findOne({ 
+                where: { external: externalProyecto } 
+            });
             
-            // Se asume que el nombre del requisito debe ser único dentro del proyecto
-            // Se salta esta validación para simplificar, ya que la unicidad recae en la HU.
+            if (!proyectoEncontrado) {
+                await t.rollback();
+                return res.status(404).json({ msg: "Proyecto no encontrado" });
+            }
 
-            // 2. Crear RequisitoMaster (Contenedor)
-            const nuevoMaster = await RequisitoMaster.create({
-                idProyecto: idProyecto
+            // 3. Crear RequisitoMaster (Usamos el ID interno que acabamos de encontrar)
+            // El Master es el contenedor principal del requisito.
+            const nuevoMaster = await db.requisitomaster.create({
+                idProyecto: proyectoEncontrado.id // <-- Aquí usamos el ID interno seguro
             }, { transaction: t });
 
-            // 3. Crear la Versión Inicial (La versión 1 del requisito)
-            const nuevaVersion = await Version.create({
+            // 4. Crear Versión (Igual que antes)
+            // La versión contiene los detalles.
+            const nuevaVersion = await db.version.create({
                 nombre: nombre.trim(),
                 descripcion: descripcion.trim(),
-                prioridad: prioridad.trim(),
-                tipo: tipo.trim(),
+                prioridad: prioridad,
+                tipo: tipo,
                 version: 1,
+                estado: 1,
                 idMaster: nuevoMaster.id 
             }, { transaction: t });
 
             await t.commit();
-
-            res.status(201).json({
-                mensaje: "Requisito registrado exitosamente con Versión 1.",
+            
+            // =========================================================
+            // 5. MODIFICACIÓN: Devolver el objeto creado (Master + Versión)
+            // Se recomienda usar 201 Created para la creación, pero mantendré 200.
+            // =========================================================
+            return res.status(200).json({ 
+                msg: "Requisito registrado exitosamente",
                 requisito: {
-                    externalMaster: nuevoMaster.external,
+                    idMaster: nuevoMaster.id,
                     nombre: nuevaVersion.nombre,
-                    version: nuevaVersion.version
+                    descripcion: nuevaVersion.descripcion,
+                    prioridad: nuevaVersion.prioridad,
+                    tipo: nuevaVersion.tipo,
+                    version: nuevaVersion.version,
+                    // Puedes agregar el external si lo tienes en el modelo Master
+                    // external: nuevoMaster.external // <--- si existe este campo
                 }
             });
 
         } catch (error) {
             await t.rollback();
-            console.error("Error al registrar requisito:", error);
-            res.status(500).json({ mensaje: "Error al registrar requisito", error: error.message });
+            console.error(error);
+            return res.status(500).json({ msg: "Error interno", error: error.message });
         }
-    };
+    }
 
     // HU14: Visualizar requisitos (Lista la última versión de cada uno)
-    listarRequisitosPorProyecto = async (req, res) => {
+    listarRequisitos = async (req, res) => {
         try {
             const { externalProyecto } = req.params;
-
-            // 1. Buscar el proyecto para obtener su ID interno
+            // 1. Buscar el Proyecto por su external
             const proyecto = await Proyecto.findOne({ where: { external: externalProyecto } });
-            if (!proyecto) {
+            if (!proyecto) {    
                 return res.status(404).json({ mensaje: "Proyecto no encontrado." });
             }
-            const idProyecto = proyecto.id;
-
-            // 2. Buscar todos los RequisitoMaster de ese proyecto
-            const requisitosMaster = await RequisitoMaster.findAll({
-                where: { idProyecto: idProyecto },
-                include: [{
-                    model: Version,
-                    as: 'versions', // Asumimos alias 'versions' en RequisitoMaster.hasMany(Version)
-                    attributes: ['nombre', 'descripcion', 'prioridad', 'tipo', 'estado', 'version', 'external', 'createdAt']
-                }],
-                order: [
-                    [{ model: Version, as: 'versions' }, 'version', 'DESC'] // Ordenar las versiones de mayor a menor
-                ]
-            });
-
-            if (!requisitosMaster || requisitosMaster.length === 0) {
-                return res.status(200).json({ mensaje: "No hay requisitos registrados para este proyecto.", requisitos: [] });
+            // 2. Buscar todos los RequisitoMaster asociados al proyecto
+            const masters = await RequisitoMaster.findAll({ where: { idProyecto: proyecto.id } });
+            const requisitos = [];
+            // 3. Para cada Master, obtener la última versión
+            for (const master of masters) {
+                const ultimaVersion = await Version.findOne({
+                    where: { idMaster: master.id },
+                    order: [['version', 'DESC']]
+                });
+                if (ultimaVersion) {
+                    requisitos.push({
+                        externalMaster: master.external,
+                        nombre: ultimaVersion.nombre,
+                        descripcion: ultimaVersion.descripcion,
+                        prioridad: ultimaVersion.prioridad,
+                        tipo: ultimaVersion.tipo,
+                        version: ultimaVersion.version,
+                        estado: ultimaVersion.estado
+                    });
+                }
             }
-
-            // 3. Mapear y obtener solo la ÚLTIMA versión de cada requisito
-            const requisitos = requisitosMaster.map(master => {
-                // La versión más alta es el primer elemento del array 'versions' por el ORDER BY
-                const ultimaVersion = master.versions[0];
-                return {
-                    externalMaster: master.external,
-                    idProyecto: master.idProyecto,
-                    nombre: ultimaVersion.nombre,
-                    descripcion: ultimaVersion.descripcion,
-                    prioridad: ultimaVersion.prioridad,
-                    tipo: ultimaVersion.tipo,
-                    estado: ultimaVersion.estado,
-                    versionActual: ultimaVersion.version,
-                    fechaCreacion: master.createdAt
-                };
-            });
-
-            res.status(200).json({
-                mensaje: "Requisitos listados exitosamente.",
-                requisitos: requisitos
-            });
-
+            res.status(200).json({ requisitos });
         } catch (error) {
             console.error("Error al listar requisitos:", error);
             res.status(500).json({ mensaje: "Error al listar requisitos", error: error.message });
         }
     };
+    
 
     // HU12: Editar requisitos (Crea una nueva Versión)
     modificarRequisito = async (req, res) => {
