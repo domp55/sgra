@@ -23,6 +23,22 @@ export async function listarProyectos(token) {
   console.log(datos.data);
   return datos.data;
 }
+
+export async function proyecto(external,token) {
+  let datos = null;
+  try {
+    datos = await GET("/api/proyecto/listarProyecto/"+external, token);
+        console.log("datos");
+
+    console.log(datos.proyecto);
+  } catch (error) {
+    return error;
+  }
+  console.log(datos.data);
+  return datos.data;
+}
+
+
 export async function listarProyectosTodos(token) {
   let datos = null;
   try {
