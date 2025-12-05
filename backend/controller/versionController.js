@@ -8,6 +8,11 @@ const RequisitoMaster = db.requisitoMaster
 class VersionController{
     
     async get(){}
+
+
+    async editar(){
+        
+    }
 }
 
 module.exports = new VersionController();

@@ -10,7 +10,11 @@ module.exports = (sequelize, DataTypes) => {
         idProyecto: {
             type: DataTypes.INTEGER,
             allowNull: false
-        }
+        },
+               estado: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false // Inicialmente desactivada hasta ser aprobada
+        },
     }, { freezeTableName: true });
 
     RequisitoMaster.associate = (models) => {

@@ -40,6 +40,8 @@ module.exports = (sequelize, DataTypes) => {
     Version.associate = (models) => {
         // Relación: Version pertenece a un RequisitoMaster
         Version.belongsTo(models.requisitomaster, { foreignKey: "idMaster" });
+        Version.hasMany(models.historiaUsuario, { foreignKey: "versionId" });
+
     };
 
     return Version;
