@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
-import Sidebar from "@/components/SidebarUser";
+import Sidebar from "@/components/SidebarProyecto";
 
 import { proyecto } from "@/hooks/ServiceProyecto";
 

@@ -12,7 +12,7 @@ import {
   Layers
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/SidebarProyecto";
 import { useRouter, useParams } from "next/navigation"; 
 import Swal from "sweetalert2";
 

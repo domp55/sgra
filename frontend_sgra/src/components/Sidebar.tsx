@@ -67,7 +67,7 @@ export default function Sidebar() {
               priority
             />
           </div>
-          <div className="flex items-center text-center gap-2 font-bold text-xl tracking-tight text-foreground">
+          <div className="flex items-center text-center gap-2 font-bold text-lg tracking-tight text-primary">
             <span>SGRA</span>
           </div>
         </div>
