@@ -133,10 +133,11 @@ export default function GestionRequisitos() {
             showConfirmButton: false
           });
         } else {
+            console.log(respuesta);
           // Error controlado del backend
           Swal.fire({
             title: "Error",
-            text: respuesta?.msg || "No se pudo completar la eliminación.",
+            text: respuesta?.response.data.msg || "No se pudo completar la eliminación.",
             icon: "error",
           });
         }

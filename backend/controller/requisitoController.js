@@ -3,6 +3,8 @@ const db = require("../models");
 const RequisitoMaster = db.requisitomaster;
 const Version = db.version;
 const Proyecto = db.proyecto; // Para validación de FK
+const HistoriaUsuario = db.historiaUsuario; // Para validación de FK
+const CondicionAceptacion = db.condicionAceptacion; // Para validación de FK
 
 class RequisitoController {
   // HU11: Registrar requisitos (Crea Master y la primera Versión)
@@ -132,9 +134,11 @@ class RequisitoController {
   // HU13: Eliminar requisitos (Eliminación lógica de todo el Master)
   eliminarRequisito = async (req, res) => {
     const t = await db.sequelize.transaction();
+
     try {
       const { externalMaster } = req.params;
 
+      // Buscar master
       const master = await RequisitoMaster.findOne({
         where: { external: externalMaster },
         transaction: t,
@@ -147,29 +151,81 @@ class RequisitoController {
           .json({ mensaje: "Requisito Maestro no encontrado." });
       }
 
+      // Obtener versiones asociadas
+      const versiones = await Version.findAll({
+        where: { idMaster: master.id },
+        include: [
+          {
+            model: HistoriaUsuario,
+            include: [CondicionAceptacion],
+          },
+        ],
+        transaction: t,
+      });
+
+      // Si no tiene versiones, solo eliminar master
+      if (versiones.length === 0) {
+        await master.update({ estado: false }, { transaction: t });
+
+        await t.commit();
+        return res.status(200).json({
+          msg: `Requisito Maestro eliminado (sin versiones asociadas).`,
+          external: master.external,
+        });
+      }
+
+      // VALIDAR ESTADOS DE HU
+      for (const version of versiones) {
+        for (const hu of version.historiaUsuarios) {
+          // Si la HU NO está en los estados permitidos
+          if (hu.estado !== "sin asignar sprint" && hu.estado !== "por hacer") {
+            await t.rollback();
+            return res.status(400).json({
+        msg: `No se puede eliminar porque la HU ${hu.codigo} de la versión ${version.nombre} está en estado ${hu.estado}.`,
+              detalle:
+                "Solo se permite eliminar si las HU están en 'sin asignar sprint' o 'por hacer'.",
+            });
+          }
+        }
+      }
+
+      //  SI TODO ES VÁLIDO → PROCEDER A ELIMINAR LÓGICO
+
+      // 1. Dar de baja HU + condiciones
+      for (const version of versiones) {
+        for (const hu of version.historiaUsuarios) {
+          await hu.update({ estaActiva: false }, { transaction: t });
+
+          // Dar baja condiciones
+          for (const ca of hu.condicionAceptacions) {
+            await ca.update({ estado: false }, { transaction: t });
+          }
+        }
+      }
+
+      // 2. Dar de baja las versiones
+      await Version.update(
+        { estado: false },
+        { where: { idMaster: master.id }, transaction: t }
+      );
+
+      // 3. Dar de baja el Master
       await master.update({ estado: false }, { transaction: t });
 
-      const [numAffectedRows] = await Version.update(
-        { estado: false },
-        {
-          where: { idMaster: master.id },
-          transaction: t,
-        }
-      );
       await t.commit();
 
       return res.status(200).json({
-        mensaje: `Requisito Maestro y sus ${numAffectedRows} versiones asociadas han sido eliminados lógicamente (estado = false).`,
+        mensaje: `Requisito Maestro eliminado correctamente junto con versiones, HU y condiciones.`,
         external: master.external,
         code: 200,
       });
     } catch (error) {
-      // 6. Si algo falla, revertir todos los cambios.
       await t.rollback();
       console.error("Error al eliminar requisito (Lógico):", error);
-      res
-        .status(500)
-        .json({ mensaje: "Error al eliminar requisito", error: error.message });
+      res.status(500).json({
+        mensaje: "Error al eliminar requisito",
+        error: error.message,
+      });
     }
   };
 
