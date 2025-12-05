@@ -235,7 +235,7 @@ export default function GestionRequisitos() {
                             </td>
 
                             <td className="px-4 py-3">
-                              <span className="font-mono text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                              <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-sky-600 text-white border border-sky-700 dark:bg-sky-600 dark:text-white">
                                 v{current.version}.0
                               </span>
                             </td>
